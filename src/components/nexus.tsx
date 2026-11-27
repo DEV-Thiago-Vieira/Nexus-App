@@ -4,6 +4,7 @@ import { useEffect, useState, useSyncExternalStore } from "react";
 import { fromDayKey, msUntilNextMidnight, toDayKey } from "@/lib/dates.ts";
 import {
   addGoal,
+  moveGoal,
   removeGoal,
   successMessage,
   toggleGoalDone,
@@ -133,6 +134,7 @@ function App() {
             onUpdate={(id, draft) => setGoals((gs) => updateGoal(gs, id, draft))}
             onToggle={(id) => setGoals((gs) => toggleGoalDone(gs, id, today))}
             onRemove={(id) => setState((s) => removeGoal(s, id))}
+            onMove={(id, overId) => setGoals((gs) => moveGoal(gs, id, overId))}
           />
         ) : (
           <>

@@ -1,16 +1,15 @@
 "use client";
 
 import { useState, type KeyboardEvent } from "react";
-import { useSortable } from "@dnd-kit/sortable";
-import { CSS } from "@dnd-kit/utilities";
 import { fromDayKey, type DayKey } from "@/lib/dates.ts";
 import { isValidSchedule, scheduledState } from "@/lib/schedule.ts";
 import { scheduleOf } from "@/lib/tasks.ts";
 import type { Task, TaskDraft } from "@/lib/types.ts";
-import { ClockIcon, FlagIcon, GripIcon } from "./icons";
+import { ClockIcon, FlagIcon } from "./icons";
 import { GoalBadge, GoalSelect, useCanLink } from "./link-field";
 import { askReminderPermission } from "./reminders";
 import { PriorityToggle, ScheduleFields, useScheduleDraft } from "./schedule-fields";
+import { DragHandle, useSortableRow } from "./sortable-list";
 import { TypeToggle } from "./type-toggle";
 import { ConfirmRemove, FormActions, ItemActions, ROW, RoundCheckbox } from "./ui";
 
@@ -25,7 +24,6 @@ type Props = {
 
 type Mode = "view" | "edit" | "confirm";
 
-const ICON_BUTTON = "flex size-11 shrink-0 items-center justify-center rounded-xl text-stone-400 transition";
 
 export function TaskItem({ task, today, done, onToggle, onUpdate, onRemove }: Props) {
   const [mode, setMode] = useState<Mode>("view");
@@ -36,10 +34,7 @@ export function TaskItem({ task, today, done, onToggle, onUpdate, onRemove }: Pr
   const draft = useScheduleDraft(today, scheduleOf(task));
   const canSave = text.trim() !== "" && isValidSchedule(draft.schedule);
 
-  const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } =
-    useSortable({ id: task.id, disabled: mode !== "view" });
-
-  const style = { transform: CSS.Translate.toString(transform), transition };
+  const { setNodeRef, setActivatorNodeRef, attributes, listeners, isDragging, style, dragClass } = useSortableRow(task.id, mode !== "view");
   const cancelOnEscape = (e: KeyboardEvent) => {
     if (e.key === "Escape") setMode("view");
   };
@@ -98,9 +93,7 @@ export function TaskItem({ task, today, done, onToggle, onUpdate, onRemove }: Pr
     <li
       ref={setNodeRef}
       style={style}
-      className={`${ROW} group relative flex min-h-15 items-center py-1.5 pr-1 pl-1.5 ${
-        isDragging ? "z-10 rounded-[1.25rem] shadow-xl ring-1 ring-stone-200" : ""
-      }`}
+      className={`${ROW} group relative flex min-h-15 items-center py-1.5 pr-1 pl-1.5 ${dragClass}`}
     >
       <label className="flex min-w-0 flex-1 cursor-pointer items-center gap-1.5 self-stretch">
         <RoundCheckbox checked={done} onChange={onToggle} label={`Concluir "${task.text}"`} />
@@ -143,17 +136,13 @@ export function TaskItem({ task, today, done, onToggle, onUpdate, onRemove }: Pr
         onRemove={() => (task.priority ? setMode("confirm") : onRemove())}
       />
 
-      <button
-        ref={setActivatorNodeRef}
-        {...attributes}
-        {...listeners}
-        aria-label={`Arrastar "${task.text}"`}
-        className={`${ICON_BUTTON} touch-none text-stone-300 hover:bg-stone-100 hover:text-stone-600 ${
-          isDragging ? "cursor-grabbing text-stone-600" : "cursor-grab"
-        }`}
-      >
-        <GripIcon />
-      </button>
+      <DragHandle
+        name={task.text}
+        setActivatorNodeRef={setActivatorNodeRef}
+        attributes={attributes}
+        listeners={listeners}
+        isDragging={isDragging}
+      />
     </li>
   );
 }

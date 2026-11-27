@@ -5,7 +5,8 @@ import { addDays, fromDayKey, type DayKey } from "@/lib/dates.ts";
 import { goalProgress, goalState, isValidGoalDraft, progressLabel, statusLabel } from "@/lib/goals.ts";
 import type { Completion, Goal, GoalDraft, Task } from "@/lib/types.ts";
 import { TargetIcon } from "./icons";
-import { CARD, ConfirmRemove, FormActions, ItemActions, RoundCheckbox, SMALL_INPUT } from "./ui";
+import { DragHandle, SortableList, useSortableRow } from "./sortable-list";
+import { ConfirmRemove, FormActions, ItemActions, ROW, RoundCheckbox, SMALL_INPUT } from "./ui";
 
 type Props = {
   goals: Goal[];
@@ -16,6 +17,7 @@ type Props = {
   onUpdate: (id: string, draft: GoalDraft) => void;
   onToggle: (id: string) => void;
   onRemove: (id: string) => void;
+  onMove: (id: string, overId: string) => void;
 };
 
 const FORM_ROW = "px-3.5 py-3";
@@ -28,9 +30,8 @@ const shortDate = (day: DayKey, withYear: boolean) =>
 const period = (start: DayKey, end: DayKey) =>
   `${shortDate(start, start.slice(0, 4) !== end.slice(0, 4))} → ${shortDate(end, true)}`;
 
-export function GoalsPanel({ goals, tasks, completions, today, onAdd, onUpdate, onToggle, onRemove }: Props) {
+export function GoalsPanel({ goals, tasks, completions, today, onAdd, onUpdate, onToggle, onRemove, onMove }: Props) {
   const [adding, setAdding] = useState(false);
-  const sorted = [...goals].sort((a, b) => Number(b.featured) - Number(a.featured));
 
   return (
     <section className="flex flex-col gap-2.5">
@@ -52,7 +53,7 @@ export function GoalsPanel({ goals, tasks, completions, today, onAdd, onUpdate, 
           previstos.
         </p>
       ) : (
-        <ul className={CARD}>
+        <SortableList items={goals} noun="Objetivo" onMove={onMove}>
           {adding && (
             <li className={FORM_ROW}>
               <GoalForm
@@ -65,7 +66,7 @@ export function GoalsPanel({ goals, tasks, completions, today, onAdd, onUpdate, 
               />
             </li>
           )}
-          {sorted.map((goal) => (
+          {goals.map((goal) => (
             <GoalItem
               key={goal.id}
               goal={goal}
@@ -77,7 +78,7 @@ export function GoalsPanel({ goals, tasks, completions, today, onAdd, onUpdate, 
               onRemove={() => onRemove(goal.id)}
             />
           ))}
-        </ul>
+        </SortableList>
       )}
     </section>
   );
@@ -101,6 +102,7 @@ function GoalItem({
   onRemove: () => void;
 }) {
   const [mode, setMode] = useState<"view" | "edit" | "confirm">("view");
+  const { setNodeRef, setActivatorNodeRef, attributes, listeners, isDragging, style, dragClass } = useSortableRow(goal.id, mode !== "view");
   const progress = goalProgress(goal, tasks, completions);
   const state = goalState(goal, tasks, completions, today);
   const done = state === "done";
@@ -108,7 +110,7 @@ function GoalItem({
 
   if (mode === "edit") {
     return (
-      <li className={FORM_ROW}>
+      <li ref={setNodeRef} style={style} className={`${ROW} ${FORM_ROW}`}>
         <GoalForm
           initial={goal}
           onCancel={() => setMode("view")}
@@ -124,6 +126,8 @@ function GoalItem({
   if (mode === "confirm") {
     return (
       <ConfirmRemove
+        ref={setNodeRef}
+        style={style}
         name={goal.title}
         detail="As tarefas vinculadas continuam, sem vínculo."
         onCancel={() => setMode("view")}
@@ -133,7 +137,11 @@ function GoalItem({
   }
 
   return (
-    <li className="group flex items-start py-1.5 pr-1 pl-1.5">
+    <li
+      ref={setNodeRef}
+      style={style}
+      className={`${ROW} group relative flex items-start py-1.5 pr-1 pl-1.5 ${dragClass}`}
+    >
       <label className="flex min-w-0 flex-1 cursor-pointer items-start gap-1.5">
         <RoundCheckbox checked={done} onChange={onToggle} label={`Marcar "${goal.title}" como concluído`} />
         <span className="min-w-0 flex-1 py-2.5 pr-2">
@@ -169,6 +177,13 @@ function GoalItem({
         </span>
       </label>
       <ItemActions name={goal.title} onEdit={() => setMode("edit")} onRemove={() => setMode("confirm")} />
+      <DragHandle
+        name={goal.title}
+        setActivatorNodeRef={setActivatorNodeRef}
+        attributes={attributes}
+        listeners={listeners}
+        isDragging={isDragging}
+      />
     </li>
   );
 }
