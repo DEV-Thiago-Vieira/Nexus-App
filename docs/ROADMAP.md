@@ -157,5 +157,4 @@ Ideias registradas, sem versão definida:
 2. Implementação com commits pequenos e descritivos.
 3. Testes passando.
 4. Pull request com descrição do que mudou e por quê.
-5. Registro das decisões técnicas no `CHANGELOG.md`.
-6. Merge, atualização da versão no `package.json` e tag `vX.Y`.
+5. Merge, atualização da versão no `package.json` e tag `vX.Y.Z` (ex.: `v1.2.0`).

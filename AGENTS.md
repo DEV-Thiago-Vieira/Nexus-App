@@ -10,6 +10,13 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 # Regras para agentes
 
+
+
+## Qualidade e Testes
+- Siga o modelo TDD.
+- Ao final de cada implementação veja o que pode ser reaproveitado, se há código morto e se está com boa qualidade.
+- Em docs há um roadmap que pode ser usado de referência.
+
 ## Privacidade do usuário
 
 - Não coloque dados pessoais (nomes, e-mails, contas, caminhos da máquina) em código, commits, mensagens, logs ou requisições a serviços externos.
