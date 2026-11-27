@@ -3,10 +3,11 @@
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { fromDayKey, msUntilNextMidnight, toDayKey } from "@/lib/dates.ts";
 import { loadState, saveState } from "@/lib/storage.ts";
+import { isRepeating, tasksForDay } from "@/lib/schedule.ts";
 import { dayStatus, progressView, rollover } from "@/lib/streak.ts";
 import { addTask, moveTask, removeTask, toggleTask, updateTask } from "@/lib/tasks.ts";
-import type { AppState, Task } from "@/lib/types.ts";
-import { CheckIcon, EyeIcon, EyeOffIcon } from "./icons";
+import type { AppState, Task, TaskDraft } from "@/lib/types.ts";
+import { CheckIcon, EyeIcon, EyeOffIcon, FlagIcon } from "./icons";
 import { AllDoneIllustration, EmptyIllustration } from "./illustrations";
 import { InstallPrompt } from "./install-prompt";
 import { Progress } from "./progress";
@@ -50,7 +51,7 @@ function useToday() {
 const newId = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
 
 const MAIN =
-  "mx-auto flex w-full max-w-xl flex-1 flex-col gap-7 px-4 pt-6 pb-[calc(7rem+env(safe-area-inset-bottom))]";
+  "mx-auto flex w-full max-w-xl flex-1 flex-col gap-7 px-4 pt-6 pb-[calc(10rem+env(safe-area-inset-bottom))]";
 
 export function Nexus() {
   const isClient = useIsClient();
@@ -83,25 +84,20 @@ function App() {
     today,
     onMove: (id: string, overId: string) => setTasks((ts) => moveTask(ts, id, overId)),
     onToggle: (id: string) => setTasks((ts) => toggleTask(ts, id, today)),
-    onUpdate: (id: string, text: string, type: Task["type"]) => setTasks((ts) => updateTask(ts, id, text, type)),
+    onUpdate: (id: string, draft: TaskDraft) => setTasks((ts) => updateTask(ts, id, draft)),
     onRemove: (id: string) => setTasks((ts) => removeTask(ts, id)),
   };
 
-  const total = state.tasks.length;
-  const doneCount = state.tasks.filter((t) => t.doneOn === today).length;
+  // Só o que vale para hoje: periódicas do dia e agendadas já liberadas.
+  const todays = tasksForDay(state.tasks, today);
+  const total = todays.length;
+  const doneCount = todays.filter((t) => t.doneOn === today).length;
   const allDone = total > 0 && doneCount === total;
-  const visible = state.showDone ? state.tasks : state.tasks.filter((t) => t.doneOn !== today);
+  const visible = state.showDone ? todays : todays.filter((t) => t.doneOn !== today);
 
-  const recurring = state.tasks.filter((t) => t.type === "recurring");
-  const recurringDone = recurring.filter((t) => t.doneOn === today).length;
-  const recurringAside =
-    dayStatus(state.tasks, today) === "done" ? (
-      <span className="flex items-center gap-1 font-semibold text-emerald-600">
-        <CheckIcon className="size-3.5" /> Sequência garantida hoje
-      </span>
-    ) : (
-      `${recurringDone} de ${recurring.length} hoje`
-    );
+  const priority = todays.filter((t) => t.priority);
+  const priorityDone = priority.filter((t) => t.doneOn === today).length;
+  const dayDone = dayStatus(state.tasks, today) === "done";
 
   return (
     <>
@@ -112,23 +108,24 @@ function App() {
           <EmptyState />
         ) : (
           <>
-            {doneCount > 0 && (
-              <EyeToggle showDone={state.showDone} doneCount={doneCount} onToggle={() => setState((s) => ({ ...s, showDone: !s.showDone }))} />
+            {(doneCount > 0 || priority.length > 0) && (
+              <div className="-mb-4 -mt-2 flex min-h-10 items-center justify-between gap-3 pl-1.5">
+                <DayStatusLabel done={dayDone} priorityDone={priorityDone} priorityTotal={priority.length} />
+                {doneCount > 0 && (
+                  <EyeToggle showDone={state.showDone} doneCount={doneCount} onToggle={() => setState((s) => ({ ...s, showDone: !s.showDone }))} />
+                )}
+              </div>
             )}
 
             {allDone && <AllDone streakDays={view.streakDays} compact={visible.length > 0} />}
 
-            <TaskList
-              title="Recorrentes"
-              aside={recurringAside}
-              tasks={visible.filter((t) => t.type === "recurring")}
-              {...listProps}
-            />
+            <TaskList title="Periódicas" tasks={visible.filter(isRepeating)} {...listProps} />
+            <TaskList title="Agendadas" tasks={visible.filter((t) => t.type === "scheduled")} {...listProps} />
             <TaskList title="Normais" tasks={visible.filter((t) => t.type === "normal")} {...listProps} />
           </>
         )}
       </main>
-      <TaskForm onAdd={(text, type) => setTasks((ts) => addTask(ts, newId(), text, type))} />
+      <TaskForm today={today} onAdd={(draft) => setTasks((ts) => addTask(ts, newId(), draft))} />
     </>
   );
 }
@@ -143,19 +140,35 @@ function EyeToggle({
   onToggle: () => void;
 }) {
   return (
-    <div className="-mb-4 -mt-2 flex justify-end">
-      <button
-        type="button"
-        aria-pressed={!showDone}
-        onClick={onToggle}
-        className="flex h-10 items-center gap-2 rounded-full px-3.5 text-[13px] font-medium text-stone-500 transition hover:bg-stone-200/50 hover:text-stone-800"
-      >
-        {showDone ? <EyeIcon /> : <EyeOffIcon />}
-        {showDone
-          ? `Ocultar concluídas (${doneCount})`
-          : `Mostrar ${doneCount} ${doneCount === 1 ? "concluída" : "concluídas"}`}
-      </button>
-    </div>
+    <button
+      type="button"
+      aria-pressed={!showDone}
+      onClick={onToggle}
+      className="ml-auto flex h-10 shrink-0 items-center gap-2 rounded-full px-3.5 text-[13px] font-medium text-stone-500 transition hover:bg-stone-200/50 hover:text-stone-800"
+    >
+      {showDone ? <EyeIcon /> : <EyeOffIcon />}
+      {showDone
+        ? `Ocultar concluídas (${doneCount})`
+        : `Mostrar ${doneCount} ${doneCount === 1 ? "concluída" : "concluídas"}`}
+    </button>
+  );
+}
+
+/** O que falta para o dia contar na sequência. */
+function DayStatusLabel({ done, priorityDone, priorityTotal }: { done: boolean; priorityDone: number; priorityTotal: number }) {
+  if (done) {
+    return (
+      <span className="flex items-center gap-1 text-[13px] font-semibold text-emerald-600">
+        <CheckIcon className="size-3.5" /> Sequência garantida hoje
+      </span>
+    );
+  }
+  if (priorityTotal === 0) return null;
+  return (
+    <span className="flex items-center gap-1 text-[13px] text-stone-500">
+      <FlagIcon className="size-3.5 text-red-600" />
+      {priorityDone} de {priorityTotal} {priorityTotal === 1 ? "prioritária" : "prioritárias"} hoje
+    </span>
   );
 }
 
@@ -193,8 +206,8 @@ function EmptyState() {
       <EmptyIllustration className="w-44" />
       <p className="text-xl font-bold tracking-tight text-stone-900">Comece seu dia</p>
       <p className="max-w-72 text-sm leading-relaxed text-stone-500">
-        Adicione uma tarefa aqui embaixo. Marque como <span className="font-semibold text-red-600">recorrente</span> o
-        que você quer fazer todo dia: elas formam a sua sequência.
+        Adicione uma tarefa aqui embaixo. Marque como <span className="font-semibold text-red-600">prioritária</span> o
+        que precisa ser feito para o dia contar na sua sequência.
       </p>
     </section>
   );

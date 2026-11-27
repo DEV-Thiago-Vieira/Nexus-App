@@ -1,14 +1,13 @@
 import type { DayKey } from "./dates.ts";
-import type { Task, TaskType } from "./types.ts";
+import type { Schedule, Task, TaskDraft } from "./types.ts";
 
-export function addTask(tasks: Task[], id: string, text: string, type: TaskType): Task[] {
-  return [...tasks, { id, text, type, doneOn: null }];
+export function addTask(tasks: Task[], id: string, draft: TaskDraft): Task[] {
+  return [...tasks, { id, doneOn: null, ...draft }];
 }
 
-export function updateTask(tasks: Task[], id: string, text: string, type: TaskType): Task[] {
-  return tasks.map((t) =>
-    t.id === id ? { ...t, text, type, doneOn: t.type === type ? t.doneOn : null } : t,
-  );
+/** Atualiza texto, prioridade e agendamento; trocar o tipo limpa a conclusão. */
+export function updateTask(tasks: Task[], id: string, draft: TaskDraft): Task[] {
+  return tasks.map((t) => (t.id === id ? { id: t.id, doneOn: t.type === draft.type ? t.doneOn : null, ...draft } : t));
 }
 
 export function removeTask(tasks: Task[], id: string): Task[] {
@@ -27,11 +26,26 @@ export function moveTask(tasks: Task[], id: string, overId: string): Task[] {
 }
 
 /**
- * Alterna feita/não feita hoje. Recorrente volta pendente no dia seguinte;
- * normal concluída é removida na virada do dia (ver rollover).
+ * Alterna feita/não feita hoje, registrando a data de conclusão.
+ * Periódicas voltam pendentes no próximo dia em que se aplicam;
+ * normal e agendada concluídas são removidas na virada do dia (ver rollover).
  */
 export function toggleTask(tasks: Task[], id: string, today: DayKey): Task[] {
   return tasks.map((t) =>
     t.id === id ? { ...t, doneOn: t.doneOn === today ? null : today } : t,
   );
+}
+
+/** Extrai só o agendamento de uma tarefa. */
+export function scheduleOf(task: Task): Schedule {
+  switch (task.type) {
+    case "normal":
+      return { type: "normal" };
+    case "periodic":
+      return { type: "periodic", weekdays: task.weekdays };
+    case "interval":
+      return { type: "interval", every: task.every, start: task.start };
+    case "scheduled":
+      return { type: "scheduled", date: task.date };
+  }
 }

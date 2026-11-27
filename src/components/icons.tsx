@@ -66,3 +66,9 @@ export const TrashIcon = (p: SVGProps<SVGSVGElement>) => (
     <path d="M2.5 4h11M6 4V2.5h4V4M4 4l.6 9.5h6.8L12 4" />
   </svg>
 );
+
+export const FlagIcon = (p: SVGProps<SVGSVGElement>) => (
+  <svg {...base} {...p}>
+    <path d="M3.5 14V2.5M3.5 3h8l-1.75 3 1.75 3h-8" />
+  </svg>
+);

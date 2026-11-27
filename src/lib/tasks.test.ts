@@ -1,11 +1,20 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { addTask, moveTask, removeTask, toggleTask, updateTask } from "./tasks.ts";
-import type { Task } from "./types.ts";
+import { ALL_WEEKDAYS } from "./schedule.ts";
+import { addTask, moveTask, removeTask, scheduleOf, toggleTask, updateTask } from "./tasks.ts";
+import type { Schedule, Task } from "./types.ts";
+
+const PERIODIC: Schedule = { type: "periodic", weekdays: ALL_WEEKDAYS };
 
 const ids = (tasks: Task[]) => tasks.map((t) => t.id).join("");
 const many = (spec: string): Task[] =>
-  [...spec].map((id) => ({ id, text: id, type: id === id.toUpperCase() ? "recurring" : "normal", doneOn: null }));
+  [...spec].map((id) => ({
+    id,
+    text: id,
+    priority: false,
+    doneOn: null,
+    ...(id === id.toUpperCase() ? PERIODIC : { type: "normal" as const }),
+  }));
 
 test("moveTask move para baixo e para cima", () => {
   const tasks = many("abcd");
@@ -16,18 +25,24 @@ test("moveTask move para baixo e para cima", () => {
 });
 
 test("moveTask preserva a ordem relativa do outro tipo", () => {
-  // maiúsculas = recorrentes, minúsculas = normais, intercaladas
+  // maiúsculas = periódicas, minúsculas = normais, intercaladas
   const tasks = many("AbBcC");
   const moved = moveTask(tasks, "C", "A");
-  assert.equal(ids(moved.filter((t) => t.type === "recurring")), "CAB");
+  assert.equal(ids(moved.filter((t) => t.type === "periodic")), "CAB");
   assert.equal(ids(moved.filter((t) => t.type === "normal")), "bc");
 });
 
 const D = "2026-01-01";
 
-for (const type of ["normal", "recurring"] as const) {
-  test(`concluir tarefa ${type} alterna o dia de hoje (fica na lista, riscada)`, () => {
-    let tasks = addTask([], "1", "x", type);
+const schedules: Schedule[] = [
+  { type: "normal" },
+  PERIODIC,
+  { type: "interval", every: 2, start: D },
+  { type: "scheduled", date: D },
+];
+for (const schedule of schedules) {
+  test(`concluir tarefa ${schedule.type} registra a data de hoje (fica na lista, riscada)`, () => {
+    let tasks = addTask([], "1", { text: "x", priority: false, ...schedule });
     tasks = toggleTask(tasks, "1", D);
     assert.equal(tasks.length, 1);
     assert.equal(tasks[0].doneOn, D);
@@ -36,14 +51,23 @@ for (const type of ["normal", "recurring"] as const) {
   });
 }
 
-test("editar tipo limpa a conclusão; editar só texto mantém", () => {
-  let tasks = toggleTask(addTask([], "1", "x", "recurring"), "1", D);
-  tasks = updateTask(tasks, "1", "y", "recurring");
-  assert.deepEqual(tasks[0], { id: "1", text: "y", type: "recurring", doneOn: D });
-  tasks = updateTask(tasks, "1", "y", "normal");
-  assert.equal(tasks[0].doneOn, null);
+test("editar tipo limpa a conclusão; editar texto, prioridade ou dias mantém", () => {
+  let tasks = toggleTask(addTask([], "1", { text: "x", priority: false, ...PERIODIC }), "1", D);
+  tasks = updateTask(tasks, "1", { text: "y", priority: true, type: "periodic", weekdays: [1, 3, 5] });
+  assert.deepEqual(tasks[0], { id: "1", text: "y", priority: true, type: "periodic", weekdays: [1, 3, 5], doneOn: D });
+  tasks = updateTask(tasks, "1", { text: "y", priority: true, type: "interval", every: 3, start: D });
+  assert.deepEqual(tasks[0], { id: "1", text: "y", priority: true, type: "interval", every: 3, start: D, doneOn: null });
+  tasks = updateTask(tasks, "1", { text: "y", priority: false, type: "scheduled", date: "2026-02-01" });
+  assert.deepEqual(tasks[0], { id: "1", text: "y", priority: false, type: "scheduled", date: "2026-02-01", doneOn: null });
+  tasks = updateTask(tasks, "1", { text: "y", priority: false, type: "normal" });
+  assert.deepEqual(tasks[0], { id: "1", text: "y", priority: false, type: "normal", doneOn: null }); // sem campos antigos
+});
+
+test("scheduleOf extrai só o agendamento", () => {
+  const [t] = addTask([], "1", { text: "x", priority: true, type: "scheduled", date: D });
+  assert.deepEqual(scheduleOf(t), { type: "scheduled", date: D });
 });
 
 test("remover", () => {
-  assert.deepEqual(removeTask(addTask([], "1", "x", "normal"), "1"), []);
+  assert.deepEqual(removeTask(addTask([], "1", { text: "x", priority: false, type: "normal" }), "1"), []);
 });
