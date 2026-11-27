@@ -4,6 +4,7 @@ import {
   addGoal,
   addHabit,
   daysLeft,
+  deadlineLabel,
   decodeLink,
   encodeLink,
   goalState,
@@ -211,4 +212,12 @@ test("encodeLink/decodeLink: ida e volta, e valores inválidos viram sem víncul
   assert.equal(decodeLink(""), null);
   assert.equal(decodeLink("outro:x"), null);
   assert.equal(decodeLink("goal:"), null);
+});
+
+test("deadlineLabel: dias restantes, prazo hoje, concluído ou não alcançado", () => {
+  assert.equal(deadlineLabel(goal("g", { deadline: "2026-12-31" }), TODAY), "Faltam 34 dias");
+  assert.equal(deadlineLabel(goal("g", { deadline: "2026-11-28" }), TODAY), "Falta 1 dia");
+  assert.equal(deadlineLabel(goal("g", { deadline: TODAY }), TODAY), "Prazo hoje");
+  assert.equal(deadlineLabel(goal("g", { deadline: "2026-11-20" }), TODAY), "Não alcançado");
+  assert.equal(deadlineLabel(goal("g", { completedOn: TODAY }), TODAY), "Concluído");
 });

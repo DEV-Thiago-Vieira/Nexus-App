@@ -112,3 +112,12 @@ export function decodeLink(value: string): TaskLink | null {
   if (at === -1 || id === "" || (type !== "goal" && type !== "habit")) return null;
   return { type, id };
 }
+
+export function deadlineLabel(goal: Goal, today: DayKey): string {
+  const state = goalState(goal, today);
+  if (state === "done") return "Concluído";
+  if (state === "missed") return "Não alcançado";
+  const days = daysLeft(goal, today);
+  if (days === 0) return "Prazo hoje";
+  return days === 1 ? "Falta 1 dia" : `Faltam ${days} dias`;
+}

@@ -2,12 +2,14 @@
 
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { fromDayKey, msUntilNextMidnight, toDayKey } from "@/lib/dates.ts";
+import { addGoal, addHabit, removeGoal, removeHabit, toggleGoalDone, updateGoal, updateHabit } from "@/lib/goals.ts";
 import { loadState, saveState } from "@/lib/storage.ts";
 import { isRepeating, tasksForDay } from "@/lib/schedule.ts";
 import { dayStatus, progressView, rollover } from "@/lib/streak.ts";
 import { addTask, moveTask, removeTask, toggleTask, updateTask } from "@/lib/tasks.ts";
-import type { AppState, Task, TaskDraft } from "@/lib/types.ts";
+import type { AppState, Goal, Habit, Task, TaskDraft } from "@/lib/types.ts";
 import { CheckIcon, EyeIcon, EyeOffIcon, FlagIcon } from "./icons";
+import { GoalsPanel } from "./goals-panel";
 import { AllDoneIllustration, EmptyIllustration } from "./illustrations";
 import { InstallPrompt } from "./install-prompt";
 import { LinksProvider } from "./link-field";
@@ -76,7 +78,11 @@ function App() {
 
   useEffect(() => saveState(state), [state]);
 
+  const [tab, setTab] = useState<Tab>("today");
+
   const setTasks = (fn: (tasks: Task[]) => Task[]) => setState((s) => ({ ...s, tasks: fn(s.tasks) }));
+  const setGoals = (fn: (goals: Goal[]) => Goal[]) => setState((s) => ({ ...s, goals: fn(s.goals) }));
+  const setHabits = (fn: (habits: Habit[]) => Habit[]) => setState((s) => ({ ...s, habits: fn(s.habits) }));
 
   const view = progressView(state.streak, state.tasks, today);
   const dateLabel = fromDayKey(today).toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long" });
@@ -104,30 +110,76 @@ function App() {
     <LinksProvider value={{ goals: state.goals, habits: state.habits, today }}>
       <Progress view={view} dateLabel={dateLabel} />
       <main className={MAIN}>
-        <InstallPrompt />
-        {total === 0 ? (
-          <EmptyState />
+        <Tabs value={tab} onChange={setTab} />
+        {tab === "goals" ? (
+          <GoalsPanel
+            goals={state.goals}
+            habits={state.habits}
+            today={today}
+            onAddGoal={(draft) => setGoals((gs) => addGoal(gs, newId(), draft))}
+            onUpdateGoal={(id, draft) => setGoals((gs) => updateGoal(gs, id, draft))}
+            onToggleGoal={(id) => setGoals((gs) => toggleGoalDone(gs, id, today))}
+            onRemoveGoal={(id) => setState((s) => removeGoal(s, id))}
+            onAddHabit={(draft) => setHabits((hs) => addHabit(hs, newId(), draft))}
+            onUpdateHabit={(id, draft) => setHabits((hs) => updateHabit(hs, id, draft))}
+            onRemoveHabit={(id) => setState((s) => removeHabit(s, id))}
+          />
         ) : (
           <>
-            {(doneCount > 0 || priority.length > 0) && (
-              <div className="-mb-4 -mt-2 flex min-h-10 items-center justify-between gap-3 pl-1.5">
-                <DayStatusLabel done={dayDone} priorityDone={priorityDone} priorityTotal={priority.length} />
-                {doneCount > 0 && (
-                  <EyeToggle showDone={state.showDone} doneCount={doneCount} onToggle={() => setState((s) => ({ ...s, showDone: !s.showDone }))} />
+            <InstallPrompt />
+            {total === 0 ? (
+              <EmptyState />
+            ) : (
+              <>
+                {(doneCount > 0 || priority.length > 0) && (
+                  <div className="-mb-4 -mt-2 flex min-h-10 items-center justify-between gap-3 pl-1.5">
+                    <DayStatusLabel done={dayDone} priorityDone={priorityDone} priorityTotal={priority.length} />
+                    {doneCount > 0 && (
+                      <EyeToggle showDone={state.showDone} doneCount={doneCount} onToggle={() => setState((s) => ({ ...s, showDone: !s.showDone }))} />
+                    )}
+                  </div>
                 )}
-              </div>
+
+                {allDone && <AllDone streakDays={view.streakDays} compact={visible.length > 0} />}
+
+                <TaskList title="Periódicas" tasks={visible.filter(isRepeating)} {...listProps} />
+                <TaskList title="Agendadas" tasks={visible.filter((t) => t.type === "scheduled")} {...listProps} />
+                <TaskList title="Normais" tasks={visible.filter((t) => t.type === "normal")} {...listProps} />
+              </>
             )}
-
-            {allDone && <AllDone streakDays={view.streakDays} compact={visible.length > 0} />}
-
-            <TaskList title="Periódicas" tasks={visible.filter(isRepeating)} {...listProps} />
-            <TaskList title="Agendadas" tasks={visible.filter((t) => t.type === "scheduled")} {...listProps} />
-            <TaskList title="Normais" tasks={visible.filter((t) => t.type === "normal")} {...listProps} />
           </>
         )}
       </main>
-      <TaskForm today={today} onAdd={(draft) => setTasks((ts) => addTask(ts, newId(), draft))} />
+      {tab === "today" && <TaskForm today={today} onAdd={(draft) => setTasks((ts) => addTask(ts, newId(), draft))} />}
     </LinksProvider>
+  );
+}
+
+type Tab = "today" | "goals";
+
+const TABS: { value: Tab; label: string }[] = [
+  { value: "today", label: "Hoje" },
+  { value: "goals", label: "Objetivos" },
+];
+
+function Tabs({ value, onChange }: { value: Tab; onChange: (tab: Tab) => void }) {
+  return (
+    <div role="tablist" aria-label="Seções" className="-mb-2 flex self-start rounded-xl bg-stone-200/50 p-1 text-sm">
+      {TABS.map((t) => (
+        <button
+          key={t.value}
+          type="button"
+          role="tab"
+          aria-selected={value === t.value}
+          onClick={() => onChange(t.value)}
+          className={`h-8 rounded-lg px-3.5 font-medium transition ${
+            value === t.value ? "bg-white text-stone-900 shadow-sm" : "text-stone-500 hover:text-stone-800"
+          }`}
+        >
+          {t.label}
+        </button>
+      ))}
+    </div>
   );
 }
 
