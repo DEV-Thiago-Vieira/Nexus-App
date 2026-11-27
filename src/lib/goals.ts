@@ -121,3 +121,13 @@ export function deadlineLabel(goal: Goal, today: DayKey): string {
   if (days === 0) return "Prazo hoje";
   return days === 1 ? "Falta 1 dia" : `Faltam ${days} dias`;
 }
+
+export const DEFAULT_QUOTE = "Fazer o mínimo todos os dias é melhor que fazer muito e não acabar nada.";
+
+export type SuccessMessage = { type: "goal"; title: string; detail: string } | { type: "quote"; text: string };
+
+export function successMessage(goals: Goal[], today: DayKey): SuccessMessage {
+  const goal = longTermGoal(goals);
+  if (!goal) return { type: "quote", text: DEFAULT_QUOTE };
+  return { type: "goal", title: goal.title, detail: deadlineLabel(goal, today) };
+}

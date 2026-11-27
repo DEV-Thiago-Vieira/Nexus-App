@@ -15,6 +15,7 @@ import {
   longTermGoal,
   removeGoal,
   removeHabit,
+  successMessage,
   toggleGoalDone,
   updateGoal,
   updateHabit,
@@ -220,4 +221,17 @@ test("deadlineLabel: dias restantes, prazo hoje, concluído ou não alcançado",
   assert.equal(deadlineLabel(goal("g", { deadline: TODAY }), TODAY), "Prazo hoje");
   assert.equal(deadlineLabel(goal("g", { deadline: "2026-11-20" }), TODAY), "Não alcançado");
   assert.equal(deadlineLabel(goal("g", { completedOn: TODAY }), TODAY), "Concluído");
+});
+
+test("successMessage: objetivo de longo prazo com dias restantes, ou a frase padrão", () => {
+  assert.deepEqual(successMessage([goal("a"), goal("b", { title: "Casa", deadline: "2026-12-07", longTerm: true })], TODAY), {
+    type: "goal",
+    title: "Casa",
+    detail: "Faltam 10 dias",
+  });
+  assert.deepEqual(successMessage([goal("a")], TODAY), {
+    type: "quote",
+    text: "Fazer o mínimo todos os dias é melhor que fazer muito e não acabar nada.",
+  });
+  assert.equal(successMessage([], TODAY).type, "quote");
 });

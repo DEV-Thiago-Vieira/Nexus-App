@@ -2,13 +2,23 @@
 
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { fromDayKey, msUntilNextMidnight, toDayKey } from "@/lib/dates.ts";
-import { addGoal, addHabit, removeGoal, removeHabit, toggleGoalDone, updateGoal, updateHabit } from "@/lib/goals.ts";
+import {
+  addGoal,
+  addHabit,
+  removeGoal,
+  removeHabit,
+  successMessage,
+  toggleGoalDone,
+  updateGoal,
+  updateHabit,
+  type SuccessMessage,
+} from "@/lib/goals.ts";
 import { loadState, saveState } from "@/lib/storage.ts";
 import { isRepeating, tasksForDay } from "@/lib/schedule.ts";
 import { dayStatus, progressView, rollover } from "@/lib/streak.ts";
 import { addTask, moveTask, removeTask, toggleTask, updateTask } from "@/lib/tasks.ts";
 import type { AppState, Goal, Habit, Task, TaskDraft } from "@/lib/types.ts";
-import { CheckIcon, EyeIcon, EyeOffIcon, FlagIcon } from "./icons";
+import { CheckIcon, EyeIcon, EyeOffIcon, FlagIcon, TargetIcon } from "./icons";
 import { GoalsPanel } from "./goals-panel";
 import { AllDoneIllustration, EmptyIllustration } from "./illustrations";
 import { InstallPrompt } from "./install-prompt";
@@ -140,7 +150,13 @@ function App() {
                   </div>
                 )}
 
-                {allDone && <AllDone streakDays={view.streakDays} compact={visible.length > 0} />}
+                {allDone && (
+                  <AllDone
+                    streakDays={view.streakDays}
+                    message={successMessage(state.goals, today)}
+                    compact={visible.length > 0}
+                  />
+                )}
 
                 <TaskList title="Periódicas" tasks={visible.filter(isRepeating)} {...listProps} />
                 <TaskList title="Agendadas" tasks={visible.filter((t) => t.type === "scheduled")} {...listProps} />
@@ -225,7 +241,7 @@ function DayStatusLabel({ done, priorityDone, priorityTotal }: { done: boolean; 
   );
 }
 
-function AllDone({ streakDays, compact }: { streakDays: number; compact: boolean }) {
+function AllDone({ streakDays, message, compact }: { streakDays: number; message: SuccessMessage; compact: boolean }) {
   return (
     <section
       aria-live="polite"
@@ -248,6 +264,17 @@ function AllDone({ streakDays, compact }: { streakDays: number; compact: boolean
             "Bom trabalho. Aproveite o resto do dia."
           )}
         </p>
+        {message.type === "goal" ? (
+          <p className={`mt-3 flex flex-col gap-0.5 text-sm ${compact ? "" : "items-center"}`}>
+            <span className="flex items-center gap-1 text-[13px] font-medium text-red-600">
+              <TargetIcon className="size-3.5" /> Objetivo de longo prazo
+            </span>
+            <span className="font-semibold text-stone-900">{message.title}</span>
+            <span className="text-[13px] text-stone-500">{message.detail}</span>
+          </p>
+        ) : (
+          <p className="mt-3 text-sm leading-relaxed text-stone-500 italic">“{message.text}”</p>
+        )}
       </div>
     </section>
   );
