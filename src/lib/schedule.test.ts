@@ -29,9 +29,9 @@ test("agendada aparece a partir da data", () => {
 
 test("tasksForDay filtra mantendo a ordem", () => {
   const tasks: Task[] = [
-    { id: "a", text: "a", priority: false, doneOn: null, type: "periodic", weekdays: [2] },
-    { id: "b", text: "b", priority: false, doneOn: null, type: "normal" },
-    { id: "c", text: "c", priority: false, doneOn: null, type: "scheduled", date: WED },
+    { id: "a", text: "a", priority: false, doneOn: null, goalId: null, linkedOn: null, type: "periodic", weekdays: [2] },
+    { id: "b", text: "b", priority: false, doneOn: null, goalId: null, linkedOn: null, type: "normal" },
+    { id: "c", text: "c", priority: false, doneOn: null, goalId: null, linkedOn: null, type: "scheduled", date: WED },
   ];
   assert.deepEqual(tasksForDay(tasks, MON).map((t) => t.id), ["b"]);
   assert.deepEqual(tasksForDay(tasks, TUE).map((t) => t.id), ["a", "b"]);
@@ -83,4 +83,12 @@ test("scheduledState: do dia, atrasada ou futura", () => {
   assert.equal(scheduledState(TUE, TUE), "today");
   assert.equal(scheduledState(MON, TUE), "overdue");
   assert.equal(scheduledState(WED, TUE), "upcoming");
+});
+
+test("isValidSchedule: horário opcional precisa ser HH:MM", () => {
+  assert.ok(isValidSchedule({ type: "scheduled", date: MON, time: "14:30" }));
+  assert.ok(isValidSchedule({ type: "periodic", weekdays: [1], time: "08:00" }));
+  assert.ok(isValidSchedule({ type: "interval", every: 2, start: MON, time: "21:15" }));
+  assert.ok(!isValidSchedule({ type: "scheduled", date: MON, time: "25:00" }));
+  assert.ok(!isValidSchedule({ type: "periodic", weekdays: [1], time: "" }));
 });

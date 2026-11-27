@@ -2,17 +2,30 @@
 
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { fromDayKey, msUntilNextMidnight, toDayKey } from "@/lib/dates.ts";
+import {
+  addGoal,
+  moveGoal,
+  removeGoal,
+  successMessage,
+  toggleGoalDone,
+  updateGoal,
+  type SuccessMessage,
+} from "@/lib/goals.ts";
 import { loadState, saveState } from "@/lib/storage.ts";
 import { isRepeating, tasksForDay } from "@/lib/schedule.ts";
 import { dayStatus, progressView, rollover } from "@/lib/streak.ts";
-import { addTask, moveTask, removeTask, toggleTask, updateTask } from "@/lib/tasks.ts";
-import type { AppState, Task, TaskDraft } from "@/lib/types.ts";
-import { CheckIcon, EyeIcon, EyeOffIcon, FlagIcon } from "./icons";
+import { addTask, moveTask, removeTask, toggleTaskDone, updateTask } from "@/lib/tasks.ts";
+import type { AppState, Goal, Task, TaskDraft } from "@/lib/types.ts";
+import { CheckIcon, EyeIcon, EyeOffIcon, FlagIcon, TargetIcon } from "./icons";
+import { GoalsPanel } from "./goals-panel";
 import { AllDoneIllustration, EmptyIllustration } from "./illustrations";
 import { InstallPrompt } from "./install-prompt";
+import { LinksProvider } from "./link-field";
 import { Progress } from "./progress";
+import { useReminders } from "./reminders";
 import { TaskForm } from "./task-form";
 import { TaskList } from "./task-list";
+import { ThemeToggle } from "./theme-toggle";
 
 const noopSubscribe = () => () => {};
 
@@ -74,8 +87,12 @@ function App() {
   if (state.streak.lastDay < today) setState(rollover(state, today));
 
   useEffect(() => saveState(state), [state]);
+  useReminders(state.tasks, today);
+
+  const [tab, setTab] = useState<Tab>("today");
 
   const setTasks = (fn: (tasks: Task[]) => Task[]) => setState((s) => ({ ...s, tasks: fn(s.tasks) }));
+  const setGoals = (fn: (goals: Goal[]) => Goal[]) => setState((s) => ({ ...s, goals: fn(s.goals) }));
 
   const view = progressView(state.streak, state.tasks, today);
   const dateLabel = fromDayKey(today).toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long" });
@@ -83,8 +100,8 @@ function App() {
   const listProps = {
     today,
     onMove: (id: string, overId: string) => setTasks((ts) => moveTask(ts, id, overId)),
-    onToggle: (id: string) => setTasks((ts) => toggleTask(ts, id, today)),
-    onUpdate: (id: string, draft: TaskDraft) => setTasks((ts) => updateTask(ts, id, draft)),
+    onToggle: (id: string) => setState((s) => toggleTaskDone(s, id, today)),
+    onUpdate: (id: string, draft: TaskDraft) => setTasks((ts) => updateTask(ts, id, draft, today)),
     onRemove: (id: string) => setTasks((ts) => removeTask(ts, id)),
   };
 
@@ -100,33 +117,87 @@ function App() {
   const dayDone = dayStatus(state.tasks, today) === "done";
 
   return (
-    <>
+    <LinksProvider value={{ goals: state.goals, tasks: state.tasks, completions: state.completions, today }}>
       <Progress view={view} dateLabel={dateLabel} />
       <main className={MAIN}>
-        <InstallPrompt />
-        {total === 0 ? (
-          <EmptyState />
+        <div className="-mb-2 flex items-center justify-between gap-3">
+          <Tabs value={tab} onChange={setTab} />
+          <ThemeToggle />
+        </div>
+        {tab === "goals" ? (
+          <GoalsPanel
+            goals={state.goals}
+            tasks={state.tasks}
+            completions={state.completions}
+            today={today}
+            onAdd={(draft) => setGoals((gs) => addGoal(gs, newId(), draft))}
+            onUpdate={(id, draft) => setGoals((gs) => updateGoal(gs, id, draft))}
+            onToggle={(id) => setGoals((gs) => toggleGoalDone(gs, id, today))}
+            onRemove={(id) => setState((s) => removeGoal(s, id))}
+            onMove={(id, overId) => setGoals((gs) => moveGoal(gs, id, overId))}
+          />
         ) : (
           <>
-            {(doneCount > 0 || priority.length > 0) && (
-              <div className="-mb-4 -mt-2 flex min-h-10 items-center justify-between gap-3 pl-1.5">
-                <DayStatusLabel done={dayDone} priorityDone={priorityDone} priorityTotal={priority.length} />
-                {doneCount > 0 && (
-                  <EyeToggle showDone={state.showDone} doneCount={doneCount} onToggle={() => setState((s) => ({ ...s, showDone: !s.showDone }))} />
+            <InstallPrompt />
+            {total === 0 ? (
+              <EmptyState />
+            ) : (
+              <>
+                {(doneCount > 0 || priority.length > 0) && (
+                  <div className="-mb-4 -mt-2 flex min-h-10 items-center justify-between gap-3 pl-1.5">
+                    <DayStatusLabel done={dayDone} priorityDone={priorityDone} priorityTotal={priority.length} />
+                    {doneCount > 0 && (
+                      <EyeToggle showDone={state.showDone} doneCount={doneCount} onToggle={() => setState((s) => ({ ...s, showDone: !s.showDone }))} />
+                    )}
+                  </div>
                 )}
-              </div>
+
+                {allDone && (
+                  <AllDone
+                    streakDays={view.streakDays}
+                    message={successMessage(state.goals, state.tasks, state.completions, today)}
+                    compact={visible.length > 0}
+                  />
+                )}
+
+                <TaskList title="Periódicas" tasks={visible.filter(isRepeating)} {...listProps} />
+                <TaskList title="Agendadas" tasks={visible.filter((t) => t.type === "scheduled")} {...listProps} />
+                <TaskList title="Normais" tasks={visible.filter((t) => t.type === "normal")} {...listProps} />
+              </>
             )}
-
-            {allDone && <AllDone streakDays={view.streakDays} compact={visible.length > 0} />}
-
-            <TaskList title="Periódicas" tasks={visible.filter(isRepeating)} {...listProps} />
-            <TaskList title="Agendadas" tasks={visible.filter((t) => t.type === "scheduled")} {...listProps} />
-            <TaskList title="Normais" tasks={visible.filter((t) => t.type === "normal")} {...listProps} />
           </>
         )}
       </main>
-      <TaskForm today={today} onAdd={(draft) => setTasks((ts) => addTask(ts, newId(), draft))} />
-    </>
+      {tab === "today" && <TaskForm today={today} onAdd={(draft) => setTasks((ts) => addTask(ts, newId(), draft, today))} />}
+    </LinksProvider>
+  );
+}
+
+type Tab = "today" | "goals";
+
+const TABS: { value: Tab; label: string }[] = [
+  { value: "today", label: "Hoje" },
+  { value: "goals", label: "Objetivos" },
+];
+
+function Tabs({ value, onChange }: { value: Tab; onChange: (tab: Tab) => void }) {
+  return (
+    <div role="tablist" aria-label="Seções" className="flex rounded-xl bg-stone-200/50 p-1 text-sm">
+      {TABS.map((t) => (
+        <button
+          key={t.value}
+          type="button"
+          role="tab"
+          aria-selected={value === t.value}
+          onClick={() => onChange(t.value)}
+          className={`h-8 rounded-lg px-3.5 font-medium transition ${
+            value === t.value ? "bg-white text-stone-900 shadow-sm" : "text-stone-500 hover:text-stone-800"
+          }`}
+        >
+          {t.label}
+        </button>
+      ))}
+    </div>
   );
 }
 
@@ -172,7 +243,7 @@ function DayStatusLabel({ done, priorityDone, priorityTotal }: { done: boolean; 
   );
 }
 
-function AllDone({ streakDays, compact }: { streakDays: number; compact: boolean }) {
+function AllDone({ streakDays, message, compact }: { streakDays: number; message: SuccessMessage; compact: boolean }) {
   return (
     <section
       aria-live="polite"
@@ -195,6 +266,19 @@ function AllDone({ streakDays, compact }: { streakDays: number; compact: boolean
             "Bom trabalho. Aproveite o resto do dia."
           )}
         </p>
+        {message.type === "goal" ? (
+          <p className={`mt-3 flex flex-col gap-0.5 text-sm ${compact ? "" : "items-center"}`}>
+            <span className="flex items-center gap-1 text-[13px] font-medium text-red-600">
+              <TargetIcon className="size-3.5" /> Objetivo em destaque
+            </span>
+            <span className="font-semibold text-stone-900">{message.title}</span>
+            <span className="text-[13px] text-stone-500">
+              {message.progress} · {message.time}
+            </span>
+          </p>
+        ) : (
+          <p className="mt-3 text-sm leading-relaxed text-stone-500 italic">“{message.text}”</p>
+        )}
       </div>
     </section>
   );

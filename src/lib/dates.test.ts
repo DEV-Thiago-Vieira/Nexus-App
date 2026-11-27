@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { addDays, isDayKey, msUntilNextMidnight, toDayKey, weekdayOf } from "./dates.ts";
+import { addDays, isDayKey, isTimeKey, msUntilNextMidnight, msUntilTime, toDayKey, toTimeKey, weekdayOf } from "./dates.ts";
 
 test("toDayKey usa a data local com zeros à esquerda", () => {
   assert.equal(toDayKey(new Date(2026, 0, 5, 23, 59)), "2026-01-05");
@@ -36,4 +36,24 @@ test("isDayKey aceita só datas reais no formato YYYY-MM-DD", () => {
   assert.ok(!isDayKey("2026-1-5"));
   assert.ok(!isDayKey(""));
   assert.ok(!isDayKey(null));
+});
+
+test("isTimeKey aceita só HH:MM válido", () => {
+  assert.ok(isTimeKey("00:00"));
+  assert.ok(isTimeKey("08:05"));
+  assert.ok(isTimeKey("23:59"));
+  assert.ok(!isTimeKey("24:00"));
+  assert.ok(!isTimeKey("8:05"));
+  assert.ok(!isTimeKey("08:60"));
+  assert.ok(!isTimeKey(""));
+  assert.ok(!isTimeKey(null));
+});
+
+test("toTimeKey usa a hora local", () => {
+  assert.equal(toTimeKey(new Date(2026, 10, 30, 7, 5, 59)), "07:05");
+});
+
+test("msUntilTime: até o horário de hoje no fuso local", () => {
+  assert.equal(msUntilTime("08:00", new Date(2026, 10, 30, 7, 59, 30)), 30_000);
+  assert.equal(msUntilTime("08:00", new Date(2026, 10, 30, 8, 0, 0)), 0);
 });

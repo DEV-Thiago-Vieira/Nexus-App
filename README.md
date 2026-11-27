@@ -2,12 +2,12 @@
 
 **Tarefas do dia e uma sequência que te mantém constante.**
 
-O Nexus é um app de tarefas minimalista, pensado para o celular, com uma ideia central: separar o que é *importante fazer hoje* do resto, e transformar a constância em uma sequência de dias. Você marca o que é prioritário, conclui, e o medidor no topo avança — 3 dias de aquecimento e depois ciclos de 7.
+O Nexus é um app de tarefas minimalista, pensado para o celular, com uma ideia central: separar o que é *importante fazer hoje* do resto, e transformar a constância em uma sequência de dias. Você marca o que é prioritário, conclui, e o medidor no topo avança — 3 dias de aquecimento e depois ciclos de 7. As tarefas podem ser ligadas a objetivos com início e fim, que mostram o quanto você avançou.
 
 🔗 **Acesse:** [nexusproductivity.com](https://nexusproductivity.com)
 
 <p align="center">
-  <img src="docs/screenshot.png" alt="Tela do Nexus com tarefas periódicas, agendadas e normais, e o medidor de sequência no topo" width="360" />
+  <img src="docs/screenshot.png" alt="Tela do Nexus com as abas Hoje e Objetivos, tarefas periódicas, agendadas e normais, e o medidor de sequência no topo" width="360" />
 </p>
 
 ## Funcionalidades
@@ -17,10 +17,13 @@ O Nexus é um app de tarefas minimalista, pensado para o celular, com uma ideia 
   - **Periódica por dias da semana:** aparece só nos dias escolhidos (ex.: seg, qua, sex) e volta desmarcada no próximo dia em que se aplica.
   - **Periódica a cada X dias:** aparece a cada 2 a 30 dias a partir de uma data de início.
   - **Agendada:** aparece a partir de uma data e, se passar do dia sem ser concluída, é marcada como **atrasada**.
+- **Horário opcional** em agendadas e periódicas: a tarefa aparece desde o início do dia e o app avisa no horário com uma notificação (enquanto estiver aberto).
 - **Prioridade:** qualquer tarefa pode ser prioritária. São as prioritárias que decidem se o dia conta para a sequência (veja a regra abaixo).
 - **Sequência diária:** medidor de 3 dias de aquecimento seguido de ciclos de 7 dias, com estatísticas de sequência atual, recorde, ciclos completos e dias concluídos.
+- **Objetivos:** com data de início e de fim, um deles em destaque. Tarefas vinculadas fazem o progresso avançar quando são concluídas nos dias previstos; o objetivo em destaque aparece na mensagem de "Tudo concluído por hoje!".
 - **Funciona sem abrir todo dia:** ao abrir o app, todos os dias desde a última visita são avaliados.
-- **Organização:** listas separadas (Periódicas, Agendadas, Normais), arrastar para reordenar, editar, ocultar concluídas.
+- **Organização:** abas Hoje / Objetivos, listas separadas (Periódicas, Agendadas, Normais), arrastar para reordenar, editar, ocultar concluídas.
+- **Modo escuro:** segue o tema do sistema até você escolher um.
 - **PWA:** pode ser instalado na tela inicial do celular.
 - **Privado por padrão:** tudo fica no `localStorage` do navegador. Sem conta, sem servidor, sem rastreamento.
 
@@ -80,13 +83,18 @@ pnpm build      # build de produção
 ## Estrutura
 
 ```
+public/
+└── sw.js           # service worker mínimo para as notificações
 src/
 ├── app/            # rotas, layout, manifest e ícones do PWA
-├── components/     # interface (lista, formulário, medidor de progresso…)
+├── components/     # interface (lista, formulário, objetivos, medidor de progresso…)
 └── lib/            # regras puras e testadas
-    ├── dates.ts      # datas no fuso local
+    ├── dates.ts      # datas e horários no fuso local
     ├── schedule.ts   # em que dias cada tarefa aparece
     ├── streak.ts     # regra do dia feito e sequência
     ├── tasks.ts      # criar, editar, concluir, reordenar
+    ├── goals.ts      # objetivos, progresso e mensagem de sucesso
+    ├── reminders.ts  # quais tarefas avisar e quando
+    ├── theme.ts      # tema claro/escuro
     └── storage.ts    # leitura, validação e migração do localStorage
 ```

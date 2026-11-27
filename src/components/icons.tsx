@@ -72,3 +72,31 @@ export const FlagIcon = (p: SVGProps<SVGSVGElement>) => (
     <path d="M3.5 14V2.5M3.5 3h8l-1.75 3 1.75 3h-8" />
   </svg>
 );
+
+export const TargetIcon = (p: SVGProps<SVGSVGElement>) => (
+  <svg {...base} {...p}>
+    <circle cx="8" cy="8" r="6" />
+    <circle cx="8" cy="8" r="3" />
+    <circle cx="8" cy="8" r="0.5" fill="currentColor" />
+  </svg>
+);
+
+export const SunIcon = (p: SVGProps<SVGSVGElement>) => (
+  <svg {...base} {...p}>
+    <circle cx="8" cy="8" r="3" />
+    <path d="M8 1.5v1.25M8 13.25v1.25M1.5 8h1.25M13.25 8h1.25M3.4 3.4l.9.9M11.7 11.7l.9.9M3.4 12.6l.9-.9M11.7 4.3l.9-.9" />
+  </svg>
+);
+
+export const MoonIcon = (p: SVGProps<SVGSVGElement>) => (
+  <svg {...base} {...p}>
+    <path d="M13.5 9.5A5.5 5.5 0 1 1 6.5 2.5a4.5 4.5 0 0 0 7 7Z" />
+  </svg>
+);
+
+export const ClockIcon = (p: SVGProps<SVGSVGElement>) => (
+  <svg {...base} {...p}>
+    <circle cx="8" cy="8" r="6" />
+    <path d="M8 4.75V8l2 1.5" />
+  </svg>
+);
