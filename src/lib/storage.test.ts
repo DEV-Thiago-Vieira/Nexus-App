@@ -120,7 +120,7 @@ test("formato novo é lido como está", () => {
     tasks: [
       { id: "p", text: "p", priority: false, type: "periodic", weekdays: [1, 3, 5], doneOn: null, goalId: null, linkedOn: null },
       { id: "i", text: "i", priority: true, type: "interval", every: 3, start: "2026-01-02", doneOn: null, goalId: "g", linkedOn: "2026-01-03" },
-      { id: "s", text: "s", priority: true, type: "scheduled", date: "2026-02-01", doneOn: null, goalId: "g", linkedOn: "2026-01-03" },
+      { id: "s", text: "s", priority: true, type: "scheduled", date: "2026-02-01", time: "14:30", doneOn: null, goalId: "g", linkedOn: "2026-01-03" },
     ],
     goals: [
       { id: "g", title: "Renda", start: "2026-01-01", end: "2026-12-31", featured: true, completedOn: null },
@@ -151,6 +151,9 @@ test("dados inválidos voltam ao estado inicial", () => {
   assert.equal(migrateTask({ id: "x", text: "x", type: "interval", every: 3, start: "x", doneOn: null }), null);
   assert.equal(migrateTask({ id: "x", text: "x", type: "normal", doneOn: null, goalId: 3, linkedOn: TODAY }), null);
   assert.equal(migrateTask({ id: "x", text: "x", type: "normal", doneOn: null, goalId: "g", linkedOn: "x" }), null);
+  assert.equal(migrateTask({ id: "x", text: "x", type: "scheduled", date: TODAY, time: "8h", doneOn: null }), null);
+  assert.equal(migrateTask({ id: "x", text: "x", type: "periodic", weekdays: [1], time: "24:00", doneOn: null }), null);
+  assert.equal(migrateTask({ id: "x", text: "x", type: "interval", every: 2, start: TODAY, time: 800, doneOn: null }), null);
   const g = { id: "g", title: "t", start: TODAY, end: TODAY, featured: false, completedOn: null };
   assert.deepEqual(migrateGoal(g), g);
   assert.equal(migrateGoal({ ...g, title: " " }), null);

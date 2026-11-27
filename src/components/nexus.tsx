@@ -21,6 +21,7 @@ import { AllDoneIllustration, EmptyIllustration } from "./illustrations";
 import { InstallPrompt } from "./install-prompt";
 import { LinksProvider } from "./link-field";
 import { Progress } from "./progress";
+import { useReminders } from "./reminders";
 import { TaskForm } from "./task-form";
 import { TaskList } from "./task-list";
 import { ThemeToggle } from "./theme-toggle";
@@ -85,6 +86,7 @@ function App() {
   if (state.streak.lastDay < today) setState(rollover(state, today));
 
   useEffect(() => saveState(state), [state]);
+  useReminders(state.tasks, today);
 
   const [tab, setTab] = useState<Tab>("today");
 

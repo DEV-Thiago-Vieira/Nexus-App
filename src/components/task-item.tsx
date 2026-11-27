@@ -7,8 +7,9 @@ import { fromDayKey, type DayKey } from "@/lib/dates.ts";
 import { isValidSchedule, scheduledState } from "@/lib/schedule.ts";
 import { scheduleOf } from "@/lib/tasks.ts";
 import type { Task, TaskDraft } from "@/lib/types.ts";
-import { FlagIcon, GripIcon } from "./icons";
+import { ClockIcon, FlagIcon, GripIcon } from "./icons";
 import { GoalBadge, GoalSelect, useCanLink } from "./link-field";
+import { askReminderPermission } from "./reminders";
 import { PriorityToggle, ScheduleFields, useScheduleDraft } from "./schedule-fields";
 import { TypeToggle } from "./type-toggle";
 import { ConfirmRemove, FormActions, ItemActions, ROW, RoundCheckbox } from "./ui";
@@ -52,6 +53,7 @@ export function TaskItem({ task, today, done, onToggle, onUpdate, onRemove }: Pr
             e.preventDefault();
             const value = text.trim();
             if (!value || !isValidSchedule(draft.schedule)) return;
+            if (draft.time) askReminderPermission();
             onUpdate({ text: value, priority, goalId, ...draft.schedule });
             setMode("view");
           }}
@@ -110,11 +112,16 @@ export function TaskItem({ task, today, done, onToggle, onUpdate, onRemove }: Pr
           >
             {task.text}
           </span>
-          {(task.priority || task.type === "scheduled" || task.goalId) && (
+          {(task.priority || task.type !== "normal" || task.goalId) && (
             <span className="mt-0.5 flex flex-wrap items-center gap-x-2 text-[13px]">
               {task.priority && (
                 <span className="flex items-center gap-1 font-medium text-red-600">
                   <FlagIcon className="size-3.5" /> Prioritária
+                </span>
+              )}
+              {task.type !== "normal" && task.time && (
+                <span className="flex items-center gap-1 text-stone-500 tabular-nums">
+                  <ClockIcon className="size-3.5" /> {task.time}
                 </span>
               )}
               {task.type === "scheduled" && <ScheduledDate date={task.date} today={today} done={done} />}

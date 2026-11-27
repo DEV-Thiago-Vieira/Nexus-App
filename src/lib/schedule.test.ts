@@ -84,3 +84,11 @@ test("scheduledState: do dia, atrasada ou futura", () => {
   assert.equal(scheduledState(MON, TUE), "overdue");
   assert.equal(scheduledState(WED, TUE), "upcoming");
 });
+
+test("isValidSchedule: horário opcional precisa ser HH:MM", () => {
+  assert.ok(isValidSchedule({ type: "scheduled", date: MON, time: "14:30" }));
+  assert.ok(isValidSchedule({ type: "periodic", weekdays: [1], time: "08:00" }));
+  assert.ok(isValidSchedule({ type: "interval", every: 2, start: MON, time: "21:15" }));
+  assert.ok(!isValidSchedule({ type: "scheduled", date: MON, time: "25:00" }));
+  assert.ok(!isValidSchedule({ type: "periodic", weekdays: [1], time: "" }));
+});

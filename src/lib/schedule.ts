@@ -1,5 +1,5 @@
 import type { DayKey } from "./dates.ts";
-import { daysBetween, isDayKey, weekdayOf } from "./dates.ts";
+import { daysBetween, isDayKey, isTimeKey, weekdayOf } from "./dates.ts";
 import type { Schedule, Task, Weekday } from "./types.ts";
 
 export const ALL_WEEKDAYS: Weekday[] = [0, 1, 2, 3, 4, 5, 6];
@@ -54,6 +54,7 @@ export function isValidInterval(every: unknown): every is number {
 
 /** Agendamento pronto para salvar (periódica sem dias ou agendada sem data não vale). */
 export function isValidSchedule(schedule: Schedule): boolean {
+  if (schedule.type !== "normal" && schedule.time !== undefined && !isTimeKey(schedule.time)) return false;
   switch (schedule.type) {
     case "normal":
       return true;

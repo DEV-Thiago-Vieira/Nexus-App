@@ -43,15 +43,15 @@ export function toggleTask(tasks: Task[], id: string, today: DayKey): Task[] {
 
 /** Extrai só o agendamento de uma tarefa. */
 export function scheduleOf(task: Task): Schedule {
+  if (task.type === "normal") return { type: "normal" };
+  const time = task.time === undefined ? {} : { time: task.time };
   switch (task.type) {
-    case "normal":
-      return { type: "normal" };
     case "periodic":
-      return { type: "periodic", weekdays: task.weekdays };
+      return { type: "periodic", weekdays: task.weekdays, ...time };
     case "interval":
-      return { type: "interval", every: task.every, start: task.start };
+      return { type: "interval", every: task.every, start: task.start, ...time };
     case "scheduled":
-      return { type: "scheduled", date: task.date };
+      return { type: "scheduled", date: task.date, ...time };
   }
 }
 

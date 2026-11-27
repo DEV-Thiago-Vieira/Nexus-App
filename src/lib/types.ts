@@ -1,4 +1,4 @@
-import type { DayKey } from "./dates.ts";
+import type { DayKey, TimeKey } from "./dates.ts";
 
 /** Dia da semana como em Date#getDay: 0 = domingo … 6 = sábado. */
 export type Weekday = 0 | 1 | 2 | 3 | 4 | 5 | 6;
@@ -7,11 +7,11 @@ export type Schedule =
   /** Fica até ser concluída; removida na virada do dia em que foi concluída. */
   | { type: "normal" }
   /** Aparece só nos dias da semana escolhidos; volta pendente no próximo dia em que se aplica. */
-  | { type: "periodic"; weekdays: Weekday[] }
+  | { type: "periodic"; weekdays: Weekday[]; time?: TimeKey }
   /** Aparece a cada `every` dias a partir de `start` (calendário fixo); se comporta como periódica. */
-  | { type: "interval"; every: number; start: DayKey }
+  | { type: "interval"; every: number; start: DayKey; time?: TimeKey }
   /** Aparece a partir de `date` e depois se comporta como normal. */
-  | { type: "scheduled"; date: DayKey };
+  | { type: "scheduled"; date: DayKey; time?: TimeKey };
 
 export type TaskType = Schedule["type"];
 

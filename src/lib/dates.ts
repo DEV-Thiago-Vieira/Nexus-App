@@ -42,3 +42,20 @@ export function msUntilNextMidnight(now: Date): number {
   const next = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
   return next.getTime() - now.getTime();
 }
+
+export type TimeKey = string;
+
+const TIME_KEY = /^([01]\d|2[0-3]):[0-5]\d$/;
+
+export function isTimeKey(value: unknown): value is TimeKey {
+  return typeof value === "string" && TIME_KEY.test(value);
+}
+
+export function toTimeKey(date: Date): TimeKey {
+  return `${pad(date.getHours())}:${pad(date.getMinutes())}`;
+}
+
+export function msUntilTime(time: TimeKey, now: Date): number {
+  const [h, m] = time.split(":").map(Number);
+  return new Date(now.getFullYear(), now.getMonth(), now.getDate(), h, m).getTime() - now.getTime();
+}

@@ -6,6 +6,7 @@ import { isValidSchedule } from "@/lib/schedule.ts";
 import type { TaskDraft } from "@/lib/types.ts";
 import { RepeatIcon, TargetIcon } from "./icons";
 import { GoalSelect, useCanLink } from "./link-field";
+import { askReminderPermission } from "./reminders";
 import { KIND_LABELS, PriorityToggle, ScheduleFields, useScheduleDraft, type Kind } from "./schedule-fields";
 
 const NEXT_KIND: Record<Kind, Kind> = { normal: "periodic", periodic: "scheduled", scheduled: "normal" };
@@ -29,6 +30,7 @@ export function TaskForm({ today, onAdd }: { today: DayKey; onAdd: (draft: TaskD
           e.preventDefault();
           const value = text.trim();
           if (!value || !isValidSchedule(draft.schedule)) return;
+          if (draft.time) askReminderPermission();
           onAdd({ text: value, priority, goalId, ...draft.schedule });
           setText("");
         }}

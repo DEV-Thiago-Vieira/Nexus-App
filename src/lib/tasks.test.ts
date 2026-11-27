@@ -110,3 +110,10 @@ test("toggleTaskDone registra a conclusão com o objetivo e desfaz ao desmarcar"
   assert.deepEqual(s.completions, [{ taskId: "n", goalId: null, day: D, once: true }]);
   assert.equal(toggleTaskDone(s, "inexistente", D), s);
 });
+
+test("scheduleOf mantém o horário", () => {
+  const [t] = addTask([], "1", { text: "x", priority: false, goalId: null, type: "periodic", weekdays: [1], time: "08:00" }, D);
+  assert.deepEqual(scheduleOf(t), { type: "periodic", weekdays: [1], time: "08:00" });
+  const [u] = addTask([], "2", { text: "x", priority: false, goalId: null, type: "scheduled", date: D }, D);
+  assert.deepEqual(scheduleOf(u), { type: "scheduled", date: D });
+});

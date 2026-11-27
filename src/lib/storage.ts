@@ -1,5 +1,5 @@
 import type { DayKey } from "./dates.ts";
-import { isDayKey } from "./dates.ts";
+import { isDayKey, isTimeKey } from "./dates.ts";
 import { ALL_WEEKDAYS, isRepeating, isValidInterval } from "./schedule.ts";
 import type { AppState, Completion, Goal, Task, Weekday } from "./types.ts";
 
@@ -34,6 +34,8 @@ export function migrateTask(value: unknown): Task | null {
   const goalId = t.goalId ?? null;
   const linkedOn = t.linkedOn ?? null;
   if ((goalId !== null && typeof goalId !== "string") || (linkedOn !== null && !isDayKey(linkedOn))) return null;
+  if (t.time !== undefined && (t.type === "normal" || !isTimeKey(t.time))) return null;
+  const time = t.time === undefined ? {} : { time: t.time };
   const base = { id: t.id, text: t.text, doneOn: t.doneOn as DayKey | null, goalId, linkedOn };
 
   switch (t.type) {
@@ -44,14 +46,20 @@ export function migrateTask(value: unknown): Task | null {
     case "periodic": {
       const days = t.weekdays;
       if (!Array.isArray(days) || days.length === 0 || !days.every(isWeekday)) return null;
-      return { ...base, priority: priority(true), type: "periodic", weekdays: [...new Set(days)].sort((a, b) => a - b) };
+      return {
+        ...base,
+        priority: priority(true),
+        type: "periodic",
+        weekdays: [...new Set(days)].sort((a, b) => a - b),
+        ...time,
+      };
     }
     case "interval":
       return isValidInterval(t.every) && isDayKey(t.start)
-        ? { ...base, priority: priority(true), type: "interval", every: t.every, start: t.start }
+        ? { ...base, priority: priority(true), type: "interval", every: t.every, start: t.start, ...time }
         : null;
     case "scheduled":
-      return isDayKey(t.date) ? { ...base, priority: priority(false), type: "scheduled", date: t.date } : null;
+      return isDayKey(t.date) ? { ...base, priority: priority(false), type: "scheduled", date: t.date, ...time } : null;
     default:
       return null;
   }
