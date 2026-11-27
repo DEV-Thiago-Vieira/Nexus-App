@@ -4,7 +4,8 @@ import { useState, type ReactNode } from "react";
 import { addDays, fromDayKey, type DayKey } from "@/lib/dates.ts";
 import { deadlineLabel, goalState, isValidGoalDraft, isValidHabitDraft } from "@/lib/goals.ts";
 import type { Goal, GoalDraft, Habit, HabitDraft } from "@/lib/types.ts";
-import { CheckIcon, PencilIcon, TargetIcon, TrashIcon } from "./icons";
+import { TargetIcon } from "./icons";
+import { CARD, ConfirmRemove, FormActions, ItemActions, RoundCheckbox, SMALL_INPUT } from "./ui";
 
 type Props = {
   goals: Goal[];
@@ -19,12 +20,9 @@ type Props = {
   onRemoveHabit: (id: string) => void;
 };
 
-const CARD =
-  "divide-y divide-stone-100 rounded-[1.25rem] bg-white shadow-[0_1px_2px_rgb(28_25_23/0.04),0_6px_20px_-6px_rgb(28_25_23/0.08)] ring-1 ring-stone-200/60";
 const INPUT =
   "h-11 w-full rounded-xl bg-stone-50 px-3.5 text-base text-stone-900 ring-1 ring-stone-200 outline-none placeholder:text-stone-400 focus:ring-2 focus:ring-stone-300";
-const ICON_BUTTON = "flex size-11 shrink-0 items-center justify-center rounded-xl text-stone-400 transition";
-const ROW = "px-3.5 py-3";
+const FORM_ROW = "px-3.5 py-3";
 
 export function GoalsPanel(props: Props) {
   const { goals, habits, today } = props;
@@ -39,7 +37,7 @@ export function GoalsPanel(props: Props) {
         empty={goals.length === 0 && adding !== "goal" ? "Objetivos têm um critério de conclusão e um prazo." : null}
       >
         {adding === "goal" && (
-          <li className={ROW}>
+          <li className={FORM_ROW}>
             <GoalForm
               initial={{ title: "", criterion: "", deadline: addDays(today, 30), longTerm: false }}
               onCancel={() => setAdding(null)}
@@ -68,7 +66,7 @@ export function GoalsPanel(props: Props) {
         empty={habits.length === 0 && adding !== "habit" ? "Hábitos são contínuos, como programar, desenhar ou ler." : null}
       >
         {adding === "habit" && (
-          <li className={ROW}>
+          <li className={FORM_ROW}>
             <HabitForm
               initial={{ name: "", goalId: null }}
               goals={goals}
@@ -147,7 +145,7 @@ function GoalItem({
 
   if (mode === "edit") {
     return (
-      <li className={ROW}>
+      <li className={FORM_ROW}>
         <GoalForm initial={goal} onCancel={() => setMode("view")} onSave={(draft) => { onUpdate(draft); setMode("view"); }} />
       </li>
     );
@@ -162,16 +160,7 @@ function GoalItem({
   return (
     <li className="group flex items-start py-1.5 pr-1 pl-1.5">
       <label className="flex min-w-0 flex-1 cursor-pointer items-start gap-1.5">
-        <span className="relative flex size-11 shrink-0 items-center justify-center">
-          <input
-            type="checkbox"
-            checked={done}
-            onChange={onToggle}
-            aria-label={`Marcar "${goal.title}" como concluído`}
-            className="peer size-6 cursor-pointer appearance-none rounded-full border-2 border-stone-300 transition-colors checked:border-emerald-500 checked:bg-emerald-500 hover:border-emerald-400 motion-safe:checked:animate-pop"
-          />
-          <CheckIcon className="pointer-events-none absolute size-4 text-white opacity-0 transition-opacity peer-checked:opacity-100" />
-        </span>
+        <RoundCheckbox checked={done} onChange={onToggle} label={`Marcar "${goal.title}" como concluído`} />
         <span className="min-w-0 flex-1 py-2.5">
           <span className={`block text-base leading-6 break-words ${done ? "text-stone-400 line-through decoration-stone-300 decoration-2" : "text-stone-800"}`}>
             {goal.title}
@@ -240,7 +229,7 @@ function GoalForm({
             required
             value={draft.deadline}
             onChange={(e) => set({ deadline: e.target.value })}
-            className="h-9 rounded-xl bg-white px-3 text-sm text-stone-900 ring-1 ring-stone-200 outline-none focus:ring-2 focus:ring-stone-300"
+            className={SMALL_INPUT}
           />
         </label>
         <button
@@ -254,7 +243,7 @@ function GoalForm({
           <TargetIcon className="size-4" /> Longo prazo
         </button>
       </div>
-      <FormButtons valid={valid} onCancel={onCancel} />
+      <FormActions valid={valid} onCancel={onCancel} />
     </form>
   );
 }
@@ -275,7 +264,7 @@ function HabitItem({
 
   if (mode === "edit") {
     return (
-      <li className={ROW}>
+      <li className={FORM_ROW}>
         <HabitForm initial={habit} goals={goals} onCancel={() => setMode("view")} onSave={(draft) => { onUpdate(draft); setMode("view"); }} />
       </li>
     );
@@ -344,75 +333,7 @@ function HabitForm({
           ))}
         </select>
       )}
-      <FormButtons valid={valid} onCancel={onCancel} />
+      <FormActions valid={valid} onCancel={onCancel} />
     </form>
-  );
-}
-
-function FormButtons({ valid, onCancel }: { valid: boolean; onCancel: () => void }) {
-  return (
-    <div className="ml-auto flex gap-2">
-      <button
-        type="button"
-        onClick={onCancel}
-        className="h-11 rounded-xl px-4 text-sm font-medium text-stone-500 hover:bg-stone-100 hover:text-stone-800"
-      >
-        Cancelar
-      </button>
-      <button
-        type="submit"
-        disabled={!valid}
-        className="h-11 rounded-xl bg-stone-900 px-5 text-sm font-semibold text-white hover:bg-stone-700 disabled:bg-stone-200 disabled:text-stone-400"
-      >
-        Salvar
-      </button>
-    </div>
-  );
-}
-
-function ItemActions({ name, onEdit, onRemove }: { name: string; onEdit: () => void; onRemove: () => void }) {
-  return (
-    <div className="flex shrink-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100 [@media(hover:hover)]:opacity-0">
-      <button type="button" onClick={onEdit} aria-label={`Editar "${name}"`} className={`${ICON_BUTTON} hover:bg-stone-100 hover:text-stone-700`}>
-        <PencilIcon />
-      </button>
-      <button type="button" onClick={onRemove} aria-label={`Remover "${name}"`} className={`${ICON_BUTTON} hover:bg-red-50 hover:text-red-600`}>
-        <TrashIcon />
-      </button>
-    </div>
-  );
-}
-
-function ConfirmRemove({
-  name,
-  detail,
-  onCancel,
-  onConfirm,
-}: {
-  name: string;
-  detail: string;
-  onCancel: () => void;
-  onConfirm: () => void;
-}) {
-  return (
-    <li
-      role="alertdialog"
-      aria-label={`Remover "${name}"?`}
-      onKeyDown={(e) => e.key === "Escape" && onCancel()}
-      className="flex min-h-15 flex-wrap items-center gap-x-3 gap-y-2 bg-red-50/60 py-2.5 pr-2.5 pl-4 first:rounded-t-[1.25rem] last:rounded-b-[1.25rem] motion-safe:animate-rise"
-    >
-      <p className="min-w-0 flex-1 text-[15px] leading-snug text-stone-700">
-        Remover <span className="font-semibold break-words text-stone-900">“{name}”</span>?
-        <span className="block text-[13px] text-stone-500">{detail}</span>
-      </p>
-      <div className="ml-auto flex gap-2">
-        <button type="button" autoFocus onClick={onCancel} className="h-11 rounded-xl px-4 text-sm font-medium text-stone-600 hover:bg-white">
-          Cancelar
-        </button>
-        <button type="button" onClick={onConfirm} className="h-11 rounded-xl bg-red-600 px-4 text-sm font-semibold text-white hover:bg-red-700">
-          Remover
-        </button>
-      </div>
-    </li>
   );
 }

@@ -16,6 +16,7 @@ import { SortableContext, sortableKeyboardCoordinates, verticalListSortingStrate
 import type { DayKey } from "@/lib/dates.ts";
 import type { Task, TaskDraft } from "@/lib/types.ts";
 import { TaskItem } from "./task-item";
+import { CARD } from "./ui";
 
 type Props = {
   title: string;
@@ -73,7 +74,7 @@ export function TaskList({ title, aside, tasks, today, onMove, onToggle, onUpdat
         }}
       >
         <SortableContext items={tasks} strategy={verticalListSortingStrategy}>
-          <ul className="divide-y divide-stone-100 rounded-[1.25rem] bg-white shadow-[0_1px_2px_rgb(28_25_23/0.04),0_6px_20px_-6px_rgb(28_25_23/0.08)] ring-1 ring-stone-200/60">
+          <ul className={CARD}>
             {tasks.map((task) => (
               <TaskItem
                 key={task.id}

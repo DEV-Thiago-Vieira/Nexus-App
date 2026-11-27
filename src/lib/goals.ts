@@ -78,7 +78,7 @@ export function removeHabit(state: AppState, id: string): AppState {
   };
 }
 
-export type LinkOption = { id: string; label: string };
+type LinkOption = { id: string; label: string };
 
 export function linkOptions(
   goals: Goal[],
@@ -122,7 +122,7 @@ export function deadlineLabel(goal: Goal, today: DayKey): string {
   return days === 1 ? "Falta 1 dia" : `Faltam ${days} dias`;
 }
 
-export const DEFAULT_QUOTE = "Fazer o mínimo todos os dias é melhor que fazer muito e não acabar nada.";
+const DEFAULT_QUOTE = "Fazer o mínimo todos os dias é melhor que fazer muito e não acabar nada.";
 
 export type SuccessMessage = { type: "goal"; title: string; detail: string } | { type: "quote"; text: string };
 

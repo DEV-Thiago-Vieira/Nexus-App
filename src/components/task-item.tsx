@@ -7,10 +7,11 @@ import { fromDayKey, type DayKey } from "@/lib/dates.ts";
 import { isValidSchedule, scheduledState } from "@/lib/schedule.ts";
 import { scheduleOf } from "@/lib/tasks.ts";
 import type { Task, TaskDraft, TaskLink } from "@/lib/types.ts";
-import { CheckIcon, FlagIcon, GripIcon, PencilIcon, TrashIcon } from "./icons";
+import { FlagIcon, GripIcon } from "./icons";
 import { hasLinkTargets, LinkBadge, LinkSelect, useLinks } from "./link-field";
 import { PriorityToggle, ScheduleFields, useScheduleDraft } from "./schedule-fields";
 import { TypeToggle } from "./type-toggle";
+import { ConfirmRemove, FormActions, ItemActions, ROW, RoundCheckbox } from "./ui";
 
 type Props = {
   task: Task;
@@ -23,7 +24,6 @@ type Props = {
 
 type Mode = "view" | "edit" | "confirm";
 
-const ROW = "bg-white first:rounded-t-[1.25rem] last:rounded-b-[1.25rem]";
 const ICON_BUTTON = "flex size-11 shrink-0 items-center justify-center rounded-xl text-stone-400 transition";
 
 export function TaskItem({ task, today, done, onToggle, onUpdate, onRemove }: Props) {
@@ -73,24 +73,7 @@ export function TaskItem({ task, today, done, onToggle, onUpdate, onRemove }: Pr
           </div>
           <ScheduleFields draft={draft} />
           {(canLink || link) && <LinkSelect value={link} onChange={setLink} className="self-start" />}
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="ml-auto flex gap-2">
-              <button
-                type="button"
-                onClick={() => setMode("view")}
-                className="h-11 rounded-xl px-4 text-sm font-medium text-stone-500 hover:bg-stone-100 hover:text-stone-800"
-              >
-                Cancelar
-              </button>
-              <button
-                type="submit"
-                disabled={!canSave}
-                className="h-11 rounded-xl bg-stone-900 px-5 text-sm font-semibold text-white hover:bg-stone-700 disabled:bg-stone-200 disabled:text-stone-400"
-              >
-                Salvar
-              </button>
-            </div>
-          </div>
+          <FormActions valid={canSave} onCancel={() => setMode("view")} />
         </form>
       </li>
     );
@@ -98,36 +81,14 @@ export function TaskItem({ task, today, done, onToggle, onUpdate, onRemove }: Pr
 
   if (mode === "confirm") {
     return (
-      <li
+      <ConfirmRemove
         ref={setNodeRef}
         style={style}
-        onKeyDown={cancelOnEscape}
-        role="alertdialog"
-        aria-label={`Remover "${task.text}"?`}
-        className={`${ROW} flex min-h-15 flex-wrap items-center gap-x-3 gap-y-2 bg-red-50/60 py-2.5 pr-2.5 pl-4 motion-safe:animate-rise`}
-      >
-        <p className="min-w-0 flex-1 text-[15px] leading-snug text-stone-700">
-          Remover <span className="font-semibold break-words text-stone-900">“{task.text}”</span>?
-          <span className="block text-[13px] text-stone-500">Ela deixa de contar para a sequência.</span>
-        </p>
-        <div className="ml-auto flex gap-2">
-          <button
-            type="button"
-            autoFocus
-            onClick={() => setMode("view")}
-            className="h-11 rounded-xl px-4 text-sm font-medium text-stone-600 hover:bg-white"
-          >
-            Cancelar
-          </button>
-          <button
-            type="button"
-            onClick={onRemove}
-            className="h-11 rounded-xl bg-red-600 px-4 text-sm font-semibold text-white hover:bg-red-700"
-          >
-            Remover
-          </button>
-        </div>
-      </li>
+        name={task.text}
+        detail="Ela deixa de contar para a sequência."
+        onCancel={() => setMode("view")}
+        onConfirm={onRemove}
+      />
     );
   }
 
@@ -140,16 +101,7 @@ export function TaskItem({ task, today, done, onToggle, onUpdate, onRemove }: Pr
       }`}
     >
       <label className="flex min-w-0 flex-1 cursor-pointer items-center gap-1.5 self-stretch">
-        <span className="relative flex size-11 shrink-0 items-center justify-center">
-          <input
-            type="checkbox"
-            checked={done}
-            onChange={onToggle}
-            aria-label={`Concluir "${task.text}"`}
-            className="peer size-6 cursor-pointer appearance-none rounded-full border-2 border-stone-300 transition-colors checked:border-emerald-500 checked:bg-emerald-500 hover:border-emerald-400 motion-safe:checked:animate-pop"
-          />
-          <CheckIcon className="pointer-events-none absolute size-4 text-white opacity-0 transition-opacity peer-checked:opacity-100" />
-        </span>
+        <RoundCheckbox checked={done} onChange={onToggle} label={`Concluir "${task.text}"`} />
         <span className="min-w-0 flex-1 py-2">
           <span
             className={`block text-base leading-6 break-words transition-colors duration-300 ${
@@ -172,30 +124,17 @@ export function TaskItem({ task, today, done, onToggle, onUpdate, onRemove }: Pr
         </span>
       </label>
 
-      <div className="flex shrink-0 transition-opacity group-focus-within:opacity-100 group-hover:opacity-100 [@media(hover:hover)]:opacity-0">
-        <button
-          type="button"
-          onClick={() => {
-            setText(task.text);
-            setPriority(task.priority);
-            setLink(task.link);
-            draft.reset(scheduleOf(task));
-            setMode("edit");
-          }}
-          aria-label={`Editar "${task.text}"`}
-          className={`${ICON_BUTTON} hover:bg-stone-100 hover:text-stone-700`}
-        >
-          <PencilIcon />
-        </button>
-        <button
-          type="button"
-          onClick={() => (task.priority ? setMode("confirm") : onRemove())}
-          aria-label={`Remover "${task.text}"`}
-          className={`${ICON_BUTTON} hover:bg-red-50 hover:text-red-600`}
-        >
-          <TrashIcon />
-        </button>
-      </div>
+      <ItemActions
+        name={task.text}
+        onEdit={() => {
+          setText(task.text);
+          setPriority(task.priority);
+          setLink(task.link);
+          draft.reset(scheduleOf(task));
+          setMode("edit");
+        }}
+        onRemove={() => (task.priority ? setMode("confirm") : onRemove())}
+      />
 
       <button
         ref={setActivatorNodeRef}

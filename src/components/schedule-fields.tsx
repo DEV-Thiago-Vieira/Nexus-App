@@ -5,6 +5,7 @@ import { type DayKey, addDays } from "@/lib/dates.ts";
 import { ALL_WEEKDAYS, MAX_INTERVAL, MIN_INTERVAL, toggleWeekday } from "@/lib/schedule.ts";
 import type { Schedule, TaskType, Weekday } from "@/lib/types.ts";
 import { FlagIcon } from "./icons";
+import { SMALL_INPUT } from "./ui";
 
 const WEEKDAYS: { short: string; name: string }[] = [
   { short: "D", name: "domingo" },
@@ -67,9 +68,6 @@ export function useScheduleDraft(today: DayKey, initial: Schedule = { type: "nor
 }
 
 export type ScheduleDraft = ReturnType<typeof useScheduleDraft>;
-
-const DATE_INPUT =
-  "h-9 rounded-xl bg-white px-3 text-sm text-stone-900 ring-1 ring-stone-200 outline-none focus:ring-2 focus:ring-stone-300";
 
 /** Campos do tipo escolhido: dias da semana ou intervalo (periódica), data (agendada). */
 export function ScheduleFields({ draft }: { draft: ScheduleDraft }) {
@@ -137,7 +135,7 @@ export function ScheduleFields({ draft }: { draft: ScheduleDraft }) {
                 required
                 value={Number.isNaN(schedule.every) ? "" : schedule.every}
                 onChange={(e) => draft.setEvery(e.target.valueAsNumber)}
-                className={`${DATE_INPUT} w-16 text-center tabular-nums`}
+                className={`${SMALL_INPUT} w-16 text-center tabular-nums`}
               />
               dias
             </label>
@@ -148,7 +146,7 @@ export function ScheduleFields({ draft }: { draft: ScheduleDraft }) {
                 required
                 value={schedule.start}
                 onChange={(e) => draft.setStart(e.target.value)}
-                className={DATE_INPUT}
+                className={SMALL_INPUT}
               />
             </label>
           </div>
@@ -166,7 +164,7 @@ export function ScheduleFields({ draft }: { draft: ScheduleDraft }) {
           required
           value={schedule.date}
           onChange={(e) => draft.setDate(e.target.value)}
-          className={DATE_INPUT}
+          className={SMALL_INPUT}
         />
       </label>
     );
