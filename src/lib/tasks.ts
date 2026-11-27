@@ -1,4 +1,5 @@
 import type { DayKey } from "./dates.ts";
+import { moveById } from "./order.ts";
 import { isRepeating } from "./schedule.ts";
 import type { AppState, Schedule, Task, TaskDraft } from "./types.ts";
 
@@ -21,13 +22,7 @@ export function removeTask(tasks: Task[], id: string): Task[] {
 
 /** Move a tarefa `id` para a posição da tarefa `overId`, mantendo a ordem das demais. */
 export function moveTask(tasks: Task[], id: string, overId: string): Task[] {
-  const from = tasks.findIndex((t) => t.id === id);
-  const to = tasks.findIndex((t) => t.id === overId);
-  if (from === -1 || to === -1 || from === to) return tasks;
-  const next = [...tasks];
-  const [moved] = next.splice(from, 1);
-  next.splice(to, 0, moved);
-  return next;
+  return moveById(tasks, id, overId);
 }
 
 /**

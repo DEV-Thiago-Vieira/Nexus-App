@@ -7,6 +7,7 @@ import {
   goalState,
   isValidGoalDraft,
   linkableGoals,
+  moveGoal,
   featuredGoal,
   progressLabel,
   removeGoal,
@@ -212,4 +213,12 @@ test("statusLabel: concluído, não alcançado ou o tempo restante", () => {
   assert.equal(statusLabel("done", g, TODAY), "Concluído");
   assert.equal(statusLabel("missed", g, TODAY), "Não alcançado");
   assert.equal(statusLabel("active", g, TODAY), "Faltam 34 dias");
+});
+
+test("moveGoal reordena os objetivos", () => {
+  const goals = [goal("a"), goal("b", { featured: true }), goal("c")];
+  assert.deepEqual(
+    moveGoal(goals, "c", "a").map((g) => g.id),
+    ["c", "a", "b"],
+  );
 });

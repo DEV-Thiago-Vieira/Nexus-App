@@ -1,5 +1,6 @@
 import type { DayKey } from "./dates.ts";
 import { addDays, daysBetween, isDayKey } from "./dates.ts";
+import { moveById } from "./order.ts";
 import { appliesOn, isRepeating } from "./schedule.ts";
 import type { AppState, Completion, Goal, GoalDraft, GoalProgress, GoalState, Task } from "./types.ts";
 
@@ -93,6 +94,10 @@ export function updateGoal(goals: Goal[], id: string, draft: GoalDraft): Goal[] 
 
 export function toggleGoalDone(goals: Goal[], id: string, today: DayKey): Goal[] {
   return goals.map((g) => (g.id === id ? { ...g, completedOn: g.completedOn === null ? today : null } : g));
+}
+
+export function moveGoal(goals: Goal[], id: string, overId: string): Goal[] {
+  return moveById(goals, id, overId);
 }
 
 export function featuredGoal(goals: Goal[]): Goal | null {
