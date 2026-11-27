@@ -26,6 +26,7 @@ import { LinksProvider } from "./link-field";
 import { Progress } from "./progress";
 import { TaskForm } from "./task-form";
 import { TaskList } from "./task-list";
+import { ThemeToggle } from "./theme-toggle";
 
 const noopSubscribe = () => () => {};
 
@@ -120,7 +121,10 @@ function App() {
     <LinksProvider value={{ goals: state.goals, habits: state.habits, today }}>
       <Progress view={view} dateLabel={dateLabel} />
       <main className={MAIN}>
-        <Tabs value={tab} onChange={setTab} />
+        <div className="-mb-2 flex items-center justify-between gap-3">
+          <Tabs value={tab} onChange={setTab} />
+          <ThemeToggle />
+        </div>
         {tab === "goals" ? (
           <GoalsPanel
             goals={state.goals}
@@ -180,7 +184,7 @@ const TABS: { value: Tab; label: string }[] = [
 
 function Tabs({ value, onChange }: { value: Tab; onChange: (tab: Tab) => void }) {
   return (
-    <div role="tablist" aria-label="Seções" className="-mb-2 flex self-start rounded-xl bg-stone-200/50 p-1 text-sm">
+    <div role="tablist" aria-label="Seções" className="flex rounded-xl bg-stone-200/50 p-1 text-sm">
       {TABS.map((t) => (
         <button
           key={t.value}
