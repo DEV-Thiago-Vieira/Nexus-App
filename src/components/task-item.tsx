@@ -3,15 +3,20 @@
 import { useState, type KeyboardEvent } from "react";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import type { Task, TaskType } from "@/lib/types.ts";
-import { CheckIcon, GripIcon, PencilIcon, TrashIcon } from "./icons";
+import { fromDayKey, type DayKey } from "@/lib/dates.ts";
+import { isValidSchedule, scheduledState } from "@/lib/schedule.ts";
+import { scheduleOf } from "@/lib/tasks.ts";
+import type { Task, TaskDraft } from "@/lib/types.ts";
+import { CheckIcon, FlagIcon, GripIcon, PencilIcon, TrashIcon } from "./icons";
+import { PriorityToggle, ScheduleFields, useScheduleDraft } from "./schedule-fields";
 import { TypeToggle } from "./type-toggle";
 
 type Props = {
   task: Task;
+  today: DayKey;
   done: boolean;
   onToggle: () => void;
-  onUpdate: (text: string, type: TaskType) => void;
+  onUpdate: (draft: TaskDraft) => void;
   onRemove: () => void;
 };
 
@@ -20,10 +25,12 @@ type Mode = "view" | "edit" | "confirm";
 const ROW = "bg-white first:rounded-t-[1.25rem] last:rounded-b-[1.25rem]";
 const ICON_BUTTON = "flex size-11 shrink-0 items-center justify-center rounded-xl text-stone-400 transition";
 
-export function TaskItem({ task, done, onToggle, onUpdate, onRemove }: Props) {
+export function TaskItem({ task, today, done, onToggle, onUpdate, onRemove }: Props) {
   const [mode, setMode] = useState<Mode>("view");
   const [text, setText] = useState(task.text);
-  const [type, setType] = useState<TaskType>(task.type);
+  const [priority, setPriority] = useState(task.priority);
+  const draft = useScheduleDraft(today, scheduleOf(task));
+  const canSave = text.trim() !== "" && isValidSchedule(draft.schedule);
 
   const { attributes, listeners, setNodeRef, setActivatorNodeRef, transform, transition, isDragging } =
     useSortable({ id: task.id, disabled: mode !== "view" });
@@ -41,8 +48,8 @@ export function TaskItem({ task, done, onToggle, onUpdate, onRemove }: Props) {
           onSubmit={(e) => {
             e.preventDefault();
             const value = text.trim();
-            if (!value) return;
-            onUpdate(value, type);
+            if (!value || !isValidSchedule(draft.schedule)) return;
+            onUpdate({ text: value, priority, ...draft.schedule });
             setMode("view");
           }}
           onKeyDown={cancelOnEscape}
@@ -56,9 +63,13 @@ export function TaskItem({ task, done, onToggle, onUpdate, onRemove }: Props) {
             className="h-12 rounded-xl bg-stone-50 px-3.5 text-base text-stone-900 ring-1 ring-stone-200 outline-none focus:ring-2 focus:ring-stone-300"
           />
           <div className="flex flex-wrap items-center gap-2">
-            <div className="min-w-48 flex-1 sm:max-w-60">
-              <TypeToggle value={type} onChange={setType} />
+            <div className="min-w-64 flex-1 sm:max-w-80">
+              <TypeToggle value={draft.kind} onChange={draft.setKind} />
             </div>
+            <PriorityToggle value={priority} onChange={setPriority} withLabel className="h-11 px-3" />
+          </div>
+          <ScheduleFields draft={draft} />
+          <div className="flex flex-wrap items-center gap-2">
             <div className="ml-auto flex gap-2">
               <button
                 type="button"
@@ -69,7 +80,7 @@ export function TaskItem({ task, done, onToggle, onUpdate, onRemove }: Props) {
               </button>
               <button
                 type="submit"
-                disabled={!text.trim()}
+                disabled={!canSave}
                 className="h-11 rounded-xl bg-stone-900 px-5 text-sm font-semibold text-white hover:bg-stone-700 disabled:bg-stone-200 disabled:text-stone-400"
               >
                 Salvar
@@ -135,12 +146,24 @@ export function TaskItem({ task, done, onToggle, onUpdate, onRemove }: Props) {
           />
           <CheckIcon className="pointer-events-none absolute size-4 text-white opacity-0 transition-opacity peer-checked:opacity-100" />
         </span>
-        <span
-          className={`min-w-0 flex-1 py-2 text-base leading-6 break-words transition-colors duration-300 ${
-            done ? "text-stone-400 line-through decoration-stone-300 decoration-2" : "text-stone-800"
-          }`}
-        >
-          {task.text}
+        <span className="min-w-0 flex-1 py-2">
+          <span
+            className={`block text-base leading-6 break-words transition-colors duration-300 ${
+              done ? "text-stone-400 line-through decoration-stone-300 decoration-2" : "text-stone-800"
+            }`}
+          >
+            {task.text}
+          </span>
+          {(task.priority || task.type === "scheduled") && (
+            <span className="mt-0.5 flex flex-wrap items-center gap-x-2 text-[13px]">
+              {task.priority && (
+                <span className="flex items-center gap-1 font-medium text-red-600">
+                  <FlagIcon className="size-3.5" /> Prioritária
+                </span>
+              )}
+              {task.type === "scheduled" && <ScheduledDate date={task.date} today={today} done={done} />}
+            </span>
+          )}
         </span>
       </label>
 
@@ -149,7 +172,8 @@ export function TaskItem({ task, done, onToggle, onUpdate, onRemove }: Props) {
           type="button"
           onClick={() => {
             setText(task.text);
-            setType(task.type);
+            setPriority(task.priority);
+            draft.reset(scheduleOf(task));
             setMode("edit");
           }}
           aria-label={`Editar "${task.text}"`}
@@ -159,7 +183,7 @@ export function TaskItem({ task, done, onToggle, onUpdate, onRemove }: Props) {
         </button>
         <button
           type="button"
-          onClick={() => (task.type === "recurring" ? setMode("confirm") : onRemove())}
+          onClick={() => (task.priority ? setMode("confirm") : onRemove())}
           aria-label={`Remover "${task.text}"`}
           className={`${ICON_BUTTON} hover:bg-red-50 hover:text-red-600`}
         >
@@ -179,5 +203,20 @@ export function TaskItem({ task, done, onToggle, onUpdate, onRemove }: Props) {
         <GripIcon />
       </button>
     </li>
+  );
+}
+
+/** Dia da agendada; destaca em vermelho se a data já passou e ela não foi concluída. */
+function ScheduledDate({ date, today, done }: { date: DayKey; today: DayKey; done: boolean }) {
+  const state = scheduledState(date, today);
+  const label =
+    state === "today"
+      ? "Hoje"
+      : fromDayKey(date).toLocaleDateString("pt-BR", { weekday: "short", day: "numeric", month: "short" });
+  const overdue = state === "overdue" && !done;
+  return (
+    <span className={overdue ? "font-semibold text-red-600" : "text-stone-400"}>
+      {overdue ? `Atrasada · ${label}` : label}
+    </span>
   );
 }

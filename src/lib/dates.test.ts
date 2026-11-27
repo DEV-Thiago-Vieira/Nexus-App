@@ -1,6 +1,6 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
-import { addDays, msUntilNextMidnight, toDayKey } from "./dates.ts";
+import { addDays, isDayKey, msUntilNextMidnight, toDayKey, weekdayOf } from "./dates.ts";
 
 test("toDayKey usa a data local com zeros à esquerda", () => {
   assert.equal(toDayKey(new Date(2026, 0, 5, 23, 59)), "2026-01-05");
@@ -22,4 +22,18 @@ test("chaves de dia são comparáveis como string", () => {
 
 test("msUntilNextMidnight", () => {
   assert.equal(msUntilNextMidnight(new Date(2026, 4, 10, 23, 59, 0)), 60_000);
+});
+
+test("weekdayOf usa o dia da semana local", () => {
+  assert.equal(weekdayOf("2026-01-04"), 0); // domingo
+  assert.equal(weekdayOf("2026-01-05"), 1); // segunda
+  assert.equal(weekdayOf("2026-01-10"), 6); // sábado
+});
+
+test("isDayKey aceita só datas reais no formato YYYY-MM-DD", () => {
+  assert.ok(isDayKey("2028-02-29"));
+  assert.ok(!isDayKey("2027-02-29"));
+  assert.ok(!isDayKey("2026-1-5"));
+  assert.ok(!isDayKey(""));
+  assert.ok(!isDayKey(null));
 });

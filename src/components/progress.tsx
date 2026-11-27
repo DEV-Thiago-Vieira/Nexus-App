@@ -85,7 +85,7 @@ export function Progress({ view, dateLabel }: { view: ProgressView | null; dateL
             </>
           )}
           <Stat label="Ciclos no total" value={String(view.totalCycles)} detail="de 7 dias" />
-          <Stat label="Dias concluídos" value={String(view.completedDays)} detail="todas as recorrentes" />
+          <Stat label="Dias concluídos" value={String(view.completedDays)} detail="meta do dia cumprida" />
         </section>
       )}
     </header>

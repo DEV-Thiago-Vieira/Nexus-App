@@ -14,7 +14,7 @@ import {
 import { restrictToParentElement, restrictToVerticalAxis } from "@dnd-kit/modifiers";
 import { SortableContext, sortableKeyboardCoordinates, verticalListSortingStrategy } from "@dnd-kit/sortable";
 import type { DayKey } from "@/lib/dates.ts";
-import type { Task, TaskType } from "@/lib/types.ts";
+import type { Task, TaskDraft } from "@/lib/types.ts";
 import { TaskItem } from "./task-item";
 
 type Props = {
@@ -25,7 +25,7 @@ type Props = {
   today: DayKey;
   onMove: (id: string, overId: string) => void;
   onToggle: (id: string) => void;
-  onUpdate: (id: string, text: string, type: TaskType) => void;
+  onUpdate: (id: string, draft: TaskDraft) => void;
   onRemove: (id: string) => void;
 };
 
@@ -78,9 +78,10 @@ export function TaskList({ title, aside, tasks, today, onMove, onToggle, onUpdat
               <TaskItem
                 key={task.id}
                 task={task}
+                today={today}
                 done={task.doneOn === today}
                 onToggle={() => onToggle(task.id)}
-                onUpdate={(text, type) => onUpdate(task.id, text, type)}
+                onUpdate={(draft) => onUpdate(task.id, draft)}
                 onRemove={() => onRemove(task.id)}
               />
             ))}

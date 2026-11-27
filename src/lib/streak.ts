@@ -1,16 +1,21 @@
 import type { DayKey } from "./dates.ts";
 import { addDays } from "./dates.ts";
+import { appliesOn, isRepeating } from "./schedule.ts";
 import type { AppState, Streak, Task } from "./types.ts";
 
 export const WARMUP_DAYS = 3;
 export const CYCLE_DAYS = 7;
 
-export type DayStatus = "neutral" | "done" | "failed";
+export type DayStatus = "done" | "failed";
 
+/**
+ * Dia com prioritárias que se aplicam a ele: feito quando todas estão concluídas nele.
+ * Dia sem prioritárias: feito se ao menos uma tarefa foi concluída nele.
+ */
 export function dayStatus(tasks: Task[], day: DayKey): DayStatus {
-  const recurring = tasks.filter((t) => t.type === "recurring");
-  if (recurring.length === 0) return "neutral";
-  return recurring.every((t) => t.doneOn === day) ? "done" : "failed";
+  const priority = tasks.filter((t) => t.priority && appliesOn(t, day));
+  if (priority.length > 0) return priority.every((t) => t.doneOn === day) ? "done" : "failed";
+  return tasks.some((t) => t.doneOn === day) ? "done" : "failed";
 }
 
 /** Um ciclo de 7 se completa quando a sequência chega a 3 + 7k dias (k ≥ 1). */
@@ -24,32 +29,30 @@ export function cyclesIn(length: number): number {
 }
 
 /**
- * Fecha os dias entre streak.lastDay e today (exclusive).
- * As tarefas salvas refletem o estado no fim de lastDay, pois o app não foi usado depois.
- * Também remove as tarefas normais concluídas em dias anteriores.
+ * Avalia cada dia de streak.lastDay até ontem (today exclusive), aplicando dayStatus a cada um.
+ * As tarefas salvas refletem o estado no fim de lastDay; nos dias em que o app não foi
+ * aberto nada foi concluído, então esses dias zeram a sequência.
+ * Também remove as normais e agendadas concluídas em dias anteriores (periódicas ficam).
  */
 export function rollover(state: AppState, today: DayKey): AppState {
   const { tasks, streak } = state;
   if (streak.lastDay >= today) return state;
 
   let { length, best, totalCycles, completedDays } = streak;
-  const status = dayStatus(tasks, streak.lastDay);
-  if (status === "done") {
-    length += 1;
-    completedDays += 1;
-    best = Math.max(best, length);
-    if (completesCycle(length)) totalCycles += 1;
-  } else if (status === "failed") {
-    length = 0;
+  for (let day = streak.lastDay; day < today; day = addDays(day, 1)) {
+    if (dayStatus(tasks, day) === "done") {
+      length += 1;
+      completedDays += 1;
+      best = Math.max(best, length);
+      if (completesCycle(length)) totalCycles += 1;
+    } else {
+      length = 0;
+    }
   }
-
-  const skippedDays = addDays(streak.lastDay, 1) < today;
-  const hasRecurring = tasks.some((t) => t.type === "recurring");
-  if (skippedDays && hasRecurring) length = 0;
 
   return {
     ...state,
-    tasks: tasks.filter((t) => !(t.type === "normal" && t.doneOn !== null && t.doneOn < today)),
+    tasks: tasks.filter((t) => isRepeating(t) || t.doneOn === null || t.doneOn >= today),
     streak: { length, best, totalCycles, completedDays, lastDay: today },
   };
 }
