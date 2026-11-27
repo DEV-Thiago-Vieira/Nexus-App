@@ -10,6 +10,7 @@ import type { AppState, Task, TaskDraft } from "@/lib/types.ts";
 import { CheckIcon, EyeIcon, EyeOffIcon, FlagIcon } from "./icons";
 import { AllDoneIllustration, EmptyIllustration } from "./illustrations";
 import { InstallPrompt } from "./install-prompt";
+import { LinksProvider } from "./link-field";
 import { Progress } from "./progress";
 import { TaskForm } from "./task-form";
 import { TaskList } from "./task-list";
@@ -100,7 +101,7 @@ function App() {
   const dayDone = dayStatus(state.tasks, today) === "done";
 
   return (
-    <>
+    <LinksProvider value={{ goals: state.goals, habits: state.habits, today }}>
       <Progress view={view} dateLabel={dateLabel} />
       <main className={MAIN}>
         <InstallPrompt />
@@ -126,7 +127,7 @@ function App() {
         )}
       </main>
       <TaskForm today={today} onAdd={(draft) => setTasks((ts) => addTask(ts, newId(), draft))} />
-    </>
+    </LinksProvider>
   );
 }
 

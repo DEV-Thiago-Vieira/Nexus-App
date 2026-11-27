@@ -6,8 +6,9 @@ import { CSS } from "@dnd-kit/utilities";
 import { fromDayKey, type DayKey } from "@/lib/dates.ts";
 import { isValidSchedule, scheduledState } from "@/lib/schedule.ts";
 import { scheduleOf } from "@/lib/tasks.ts";
-import type { Task, TaskDraft } from "@/lib/types.ts";
+import type { Task, TaskDraft, TaskLink } from "@/lib/types.ts";
 import { CheckIcon, FlagIcon, GripIcon, PencilIcon, TrashIcon } from "./icons";
+import { hasLinkTargets, LinkBadge, LinkSelect, useLinks } from "./link-field";
 import { PriorityToggle, ScheduleFields, useScheduleDraft } from "./schedule-fields";
 import { TypeToggle } from "./type-toggle";
 
@@ -29,6 +30,8 @@ export function TaskItem({ task, today, done, onToggle, onUpdate, onRemove }: Pr
   const [mode, setMode] = useState<Mode>("view");
   const [text, setText] = useState(task.text);
   const [priority, setPriority] = useState(task.priority);
+  const [link, setLink] = useState<TaskLink | null>(task.link);
+  const canLink = hasLinkTargets(useLinks());
   const draft = useScheduleDraft(today, scheduleOf(task));
   const canSave = text.trim() !== "" && isValidSchedule(draft.schedule);
 
@@ -49,7 +52,7 @@ export function TaskItem({ task, today, done, onToggle, onUpdate, onRemove }: Pr
             e.preventDefault();
             const value = text.trim();
             if (!value || !isValidSchedule(draft.schedule)) return;
-            onUpdate({ text: value, priority, link: task.link, ...draft.schedule });
+            onUpdate({ text: value, priority, link, ...draft.schedule });
             setMode("view");
           }}
           onKeyDown={cancelOnEscape}
@@ -69,6 +72,7 @@ export function TaskItem({ task, today, done, onToggle, onUpdate, onRemove }: Pr
             <PriorityToggle value={priority} onChange={setPriority} withLabel className="h-11 px-3" />
           </div>
           <ScheduleFields draft={draft} />
+          {(canLink || link) && <LinkSelect value={link} onChange={setLink} className="self-start" />}
           <div className="flex flex-wrap items-center gap-2">
             <div className="ml-auto flex gap-2">
               <button
@@ -154,7 +158,7 @@ export function TaskItem({ task, today, done, onToggle, onUpdate, onRemove }: Pr
           >
             {task.text}
           </span>
-          {(task.priority || task.type === "scheduled") && (
+          {(task.priority || task.type === "scheduled" || task.link) && (
             <span className="mt-0.5 flex flex-wrap items-center gap-x-2 text-[13px]">
               {task.priority && (
                 <span className="flex items-center gap-1 font-medium text-red-600">
@@ -162,6 +166,7 @@ export function TaskItem({ task, today, done, onToggle, onUpdate, onRemove }: Pr
                 </span>
               )}
               {task.type === "scheduled" && <ScheduledDate date={task.date} today={today} done={done} />}
+              <LinkBadge link={task.link} />
             </span>
           )}
         </span>
@@ -173,6 +178,7 @@ export function TaskItem({ task, today, done, onToggle, onUpdate, onRemove }: Pr
           onClick={() => {
             setText(task.text);
             setPriority(task.priority);
+            setLink(task.link);
             draft.reset(scheduleOf(task));
             setMode("edit");
           }}

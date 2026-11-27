@@ -4,6 +4,8 @@ import {
   addGoal,
   addHabit,
   daysLeft,
+  decodeLink,
+  encodeLink,
   goalState,
   isValidGoalDraft,
   isValidHabitDraft,
@@ -199,4 +201,14 @@ test("linkLabel: nome do objetivo ou hábito vinculado", () => {
   assert.equal(linkLabel({ type: "habit", id: "h" }, goals, habits), "Ler");
   assert.equal(linkLabel({ type: "habit", id: "x" }, goals, habits), null);
   assert.equal(linkLabel(null, goals, habits), null);
+});
+
+test("encodeLink/decodeLink: ida e volta, e valores inválidos viram sem vínculo", () => {
+  assert.equal(encodeLink(null), "");
+  assert.equal(encodeLink({ type: "goal", id: "a:b" }), "goal:a:b");
+  assert.deepEqual(decodeLink("goal:a:b"), { type: "goal", id: "a:b" });
+  assert.deepEqual(decodeLink("habit:h"), { type: "habit", id: "h" });
+  assert.equal(decodeLink(""), null);
+  assert.equal(decodeLink("outro:x"), null);
+  assert.equal(decodeLink("goal:"), null);
 });

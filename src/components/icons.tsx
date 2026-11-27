@@ -72,3 +72,11 @@ export const FlagIcon = (p: SVGProps<SVGSVGElement>) => (
     <path d="M3.5 14V2.5M3.5 3h8l-1.75 3 1.75 3h-8" />
   </svg>
 );
+
+export const TargetIcon = (p: SVGProps<SVGSVGElement>) => (
+  <svg {...base} {...p}>
+    <circle cx="8" cy="8" r="6" />
+    <circle cx="8" cy="8" r="3" />
+    <circle cx="8" cy="8" r="0.5" fill="currentColor" />
+  </svg>
+);

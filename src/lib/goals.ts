@@ -100,3 +100,15 @@ export function linkLabel(link: TaskLink | null, goals: Goal[], habits: Habit[])
   if (link.type === "goal") return goals.find((g) => g.id === link.id)?.title ?? null;
   return habits.find((h) => h.id === link.id)?.name ?? null;
 }
+
+export function encodeLink(link: TaskLink | null): string {
+  return link ? `${link.type}:${link.id}` : "";
+}
+
+export function decodeLink(value: string): TaskLink | null {
+  const at = value.indexOf(":");
+  const type = value.slice(0, at);
+  const id = value.slice(at + 1);
+  if (at === -1 || id === "" || (type !== "goal" && type !== "habit")) return null;
+  return { type, id };
+}
