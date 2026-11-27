@@ -8,6 +8,7 @@
 - **Vínculo de tarefas a objetivos** (opcional), no formulário de criar e de editar. A lista do dia mostra o objetivo vinculado discretamente.
 - **Progresso do objetivo** calculado a partir das tarefas vinculadas.
 - **Mensagem de sucesso**: ao concluir o dia, mostra o objetivo em destaque com o progresso e o tempo restante; sem ele, a frase *"Fazer o mínimo todos os dias é melhor que fazer muito e não acabar nada."*
+- **Horário opcional** em tarefas agendadas e periódicas. A tarefa continua aparecendo desde o início do dia; o horário serve para **avisar** com uma notificação do navegador.
 - **Abas Hoje / Objetivos**, para não poluir a tela principal.
 - **Modo escuro** com alternância manual; na primeira visita segue o tema do sistema.
 
@@ -28,6 +29,15 @@
 - A data de fim pode ser editada para estender o prazo.
 
 **Registro de conclusões (`completions`).** Antes, cada tarefa guardava só a data da última conclusão (`doneOn`), e normais e agendadas concluídas eram removidas na virada do dia. Isso não basta para medir progresso. Agora cada conclusão vira um registro `{ taskId, goalId, day, once }`, adicionado ao marcar e removido ao desmarcar no mesmo dia. O registro sobrevive à remoção da tarefa da lista, o que permite contar tarefas únicas já concluídas. Ele também prepara o histórico da aba de progresso (v1.3).
+
+**Horário e avisos sem servidor.**
+- O horário (`time`, no formato `HH:MM` local) é opcional e existe só em agendadas e periódicas.
+- O app não tem servidor e não envia dados para fora. Por isso o aviso é agendado no próprio navegador: um timer dispara no próximo horário das tarefas pendentes de hoje.
+- Com isso, o aviso funciona enquanto o app estiver aberto, em primeiro plano ou em outra aba. Com o app fechado não há aviso; isso depende de push com servidor, previsto para a v2.3.
+- A permissão de notificação só é pedida quando o usuário salva uma tarefa com horário.
+- A escolha de quais tarefas avisar e quando (`nextReminderTime`, `remindersAt`) é função pura, testada. Tarefas já concluídas não avisam.
+
+**Service worker mínimo.** No Android, o Chrome só mostra notificações de uma página por meio de um service worker. O `public/sw.js` faz só isso: ao tocar na notificação, foca o app ou o abre. Não há cache offline nem push. Ele é servido sem cache (`Cache-Control: no-cache`), como recomenda o guia de PWA do Next.js, para que atualizações cheguem na hora.
 
 **Remoção de objetivo.** As tarefas vinculadas continuam existindo, só perdem o vínculo.
 
@@ -59,3 +69,4 @@ Lógica pura com testes em `node:test`:
 - `tasks.test.ts`: vínculo e registro de conclusões.
 - `storage.test.ts`: migração e validação.
 - `theme.test.ts`: tema e script inline.
+- `reminders.test.ts` e `dates.test.ts`: próximos avisos e utilitários de horário.
