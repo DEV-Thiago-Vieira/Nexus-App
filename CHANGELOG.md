@@ -4,10 +4,10 @@
 
 ### O que mudou
 
-- **Objetivos** com título, data de início e data de fim. Um deles pode ser marcado como **objetivo de longo prazo**.
+- **Objetivos** com título, data de início e data de fim. Um deles pode ser marcado como **objetivo em destaque**.
 - **Vínculo de tarefas a objetivos** (opcional), no formulário de criar e de editar. A lista do dia mostra o objetivo vinculado discretamente.
 - **Progresso do objetivo** calculado a partir das tarefas vinculadas.
-- **Mensagem de sucesso**: ao concluir o dia, mostra o objetivo de longo prazo com o progresso e o tempo restante; sem ele, a frase *"Fazer o mínimo todos os dias é melhor que fazer muito e não acabar nada."*
+- **Mensagem de sucesso**: ao concluir o dia, mostra o objetivo em destaque com o progresso e o tempo restante; sem ele, a frase *"Fazer o mínimo todos os dias é melhor que fazer muito e não acabar nada."*
 - **Abas Hoje / Objetivos**, para não poluir a tela principal.
 - **Modo escuro** com alternância manual; na primeira visita segue o tema do sistema.
 
@@ -39,7 +39,7 @@
 
 **Validação ao carregar.**
 - Objetivos e registros de conclusão são validados como as tarefas. Se algum dado for inválido, o estado volta ao inicial, mantendo o comportamento das versões anteriores.
-- Ao carregar, os dados também são deixados coerentes: só um objetivo de longo prazo e nenhum vínculo para objetivo inexistente.
+- Ao carregar, os dados também são deixados coerentes: só um objetivo em destaque e nenhum vínculo para objetivo inexistente.
 
 **Modo escuro sem "piscar".**
 - Um script inline no `<head>` aplica `data-theme` antes da primeira pintura, como recomenda o guia do Next.js *Preventing flash before hydration*. O script é uma constante do código, sem conteúdo do usuário.
@@ -55,7 +55,7 @@
 ### Testes
 
 Lógica pura com testes em `node:test`:
-- `goals.test.ts`: progresso, estados, rótulos, longo prazo, remoção e mensagem de sucesso.
+- `goals.test.ts`: progresso, estados, rótulos, destaque, remoção e mensagem de sucesso.
 - `tasks.test.ts`: vínculo e registro de conclusões.
 - `storage.test.ts`: migração e validação.
 - `theme.test.ts`: tema e script inline.

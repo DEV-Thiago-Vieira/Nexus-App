@@ -34,7 +34,7 @@ export type GoalDraft = {
   title: string;
   start: DayKey;
   end: DayKey;
-  longTerm: boolean;
+  featured: boolean;
 };
 
 export type Goal = { id: string; completedOn: DayKey | null } & GoalDraft;

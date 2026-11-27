@@ -68,7 +68,7 @@ export function migrateGoal(value: unknown): Goal | null {
     !isDayKey(g.start) ||
     !isDayKey(g.end) ||
     g.start > g.end ||
-    typeof g.longTerm !== "boolean" ||
+    typeof g.featured !== "boolean" ||
     (g.completedOn !== null && !isDayKey(g.completedOn))
   ) {
     return null;
@@ -78,7 +78,7 @@ export function migrateGoal(value: unknown): Goal | null {
     title: g.title,
     start: g.start,
     end: g.end,
-    longTerm: g.longTerm,
+    featured: g.featured,
     completedOn: g.completedOn as DayKey | null,
   };
 }
@@ -108,10 +108,10 @@ const completionsFromTasks = (tasks: Task[]): Completion[] =>
   tasks.flatMap((t) => (t.doneOn ? [{ taskId: t.id, goalId: t.goalId, day: t.doneOn, once: !isRepeating(t) }] : []));
 
 function sanitize(tasks: Task[], goals: Goal[]) {
-  const firstLongTerm = goals.find((g) => g.longTerm)?.id;
+  const firstFeatured = goals.find((g) => g.featured)?.id;
   const goalIds = new Set(goals.map((g) => g.id));
   return {
-    goals: goals.map((g) => (g.longTerm && g.id !== firstLongTerm ? { ...g, longTerm: false } : g)),
+    goals: goals.map((g) => (g.featured && g.id !== firstFeatured ? { ...g, featured: false } : g)),
     tasks: tasks.map((t) => (t.goalId !== null && !goalIds.has(t.goalId) ? { ...t, goalId: null, linkedOn: null } : t)),
   };
 }

@@ -72,20 +72,20 @@ const cleanGoal = (draft: GoalDraft): GoalDraft => ({
   title: draft.title.trim(),
   start: draft.start,
   end: draft.end,
-  longTerm: draft.longTerm,
+  featured: draft.featured,
 });
 
-const keepSingleLongTerm = (goals: Goal[], id: string): Goal[] =>
-  goals.find((g) => g.id === id)?.longTerm
-    ? goals.map((g) => (g.id !== id && g.longTerm ? { ...g, longTerm: false } : g))
+const keepSingleFeatured = (goals: Goal[], id: string): Goal[] =>
+  goals.find((g) => g.id === id)?.featured
+    ? goals.map((g) => (g.id !== id && g.featured ? { ...g, featured: false } : g))
     : goals;
 
 export function addGoal(goals: Goal[], id: string, draft: GoalDraft): Goal[] {
-  return keepSingleLongTerm([...goals, { id, completedOn: null, ...cleanGoal(draft) }], id);
+  return keepSingleFeatured([...goals, { id, completedOn: null, ...cleanGoal(draft) }], id);
 }
 
 export function updateGoal(goals: Goal[], id: string, draft: GoalDraft): Goal[] {
-  return keepSingleLongTerm(
+  return keepSingleFeatured(
     goals.map((g) => (g.id === id ? { ...g, ...cleanGoal(draft) } : g)),
     id,
   );
@@ -95,8 +95,8 @@ export function toggleGoalDone(goals: Goal[], id: string, today: DayKey): Goal[]
   return goals.map((g) => (g.id === id ? { ...g, completedOn: g.completedOn === null ? today : null } : g));
 }
 
-export function longTermGoal(goals: Goal[]): Goal | null {
-  return goals.find((g) => g.longTerm) ?? null;
+export function featuredGoal(goals: Goal[]): Goal | null {
+  return goals.find((g) => g.featured) ?? null;
 }
 
 export function removeGoal(state: AppState, id: string): AppState {
@@ -122,7 +122,7 @@ const DEFAULT_QUOTE = "Fazer o mínimo todos os dias é melhor que fazer muito e
 export type SuccessMessage = { type: "goal"; title: string; progress: string; time: string } | { type: "quote"; text: string };
 
 export function successMessage(goals: Goal[], tasks: Task[], completions: Completion[], today: DayKey): SuccessMessage {
-  const goal = longTermGoal(goals);
+  const goal = featuredGoal(goals);
   if (!goal) return { type: "quote", text: DEFAULT_QUOTE };
   return {
     type: "goal",

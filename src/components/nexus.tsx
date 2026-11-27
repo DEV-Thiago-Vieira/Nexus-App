@@ -265,7 +265,7 @@ function AllDone({ streakDays, message, compact }: { streakDays: number; message
         {message.type === "goal" ? (
           <p className={`mt-3 flex flex-col gap-0.5 text-sm ${compact ? "" : "items-center"}`}>
             <span className="flex items-center gap-1 text-[13px] font-medium text-red-600">
-              <TargetIcon className="size-3.5" /> Objetivo de longo prazo
+              <TargetIcon className="size-3.5" /> Objetivo em destaque
             </span>
             <span className="font-semibold text-stone-900">{message.title}</span>
             <span className="text-[13px] text-stone-500">

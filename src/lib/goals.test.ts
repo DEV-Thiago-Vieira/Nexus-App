@@ -7,7 +7,7 @@ import {
   goalState,
   isValidGoalDraft,
   linkableGoals,
-  longTermGoal,
+  featuredGoal,
   progressLabel,
   removeGoal,
   statusLabel,
@@ -25,7 +25,7 @@ const draft = (over: Partial<GoalDraft> = {}): GoalDraft => ({
   title: "Renda",
   start: "2026-11-01",
   end: "2026-12-31",
-  longTerm: false,
+  featured: false,
   ...over,
 });
 
@@ -116,24 +116,24 @@ test("toggleGoalDone marca com a data de hoje e desmarca", () => {
   assert.equal(goals[0].completedOn, null);
 });
 
-test("só um objetivo pode ser de longo prazo", () => {
-  let goals = addGoal([], "a", draft({ longTerm: true }));
-  goals = addGoal(goals, "b", draft({ longTerm: true }));
+test("só um objetivo pode estar em destaque", () => {
+  let goals = addGoal([], "a", draft({ featured: true }));
+  goals = addGoal(goals, "b", draft({ featured: true }));
   assert.deepEqual(
-    goals.map((g) => g.longTerm),
+    goals.map((g) => g.featured),
     [false, true],
   );
-  goals = updateGoal(goals, "a", draft({ title: "Novo", longTerm: true }));
+  goals = updateGoal(goals, "a", draft({ title: "Novo", featured: true }));
   assert.deepEqual(
-    goals.map((g) => [g.title, g.longTerm]),
+    goals.map((g) => [g.title, g.featured]),
     [
       ["Novo", true],
       ["Renda", false],
     ],
   );
-  assert.equal(longTermGoal(goals)?.id, "a");
-  goals = updateGoal(goals, "a", draft({ longTerm: false }));
-  assert.equal(longTermGoal(goals), null);
+  assert.equal(featuredGoal(goals)?.id, "a");
+  goals = updateGoal(goals, "a", draft({ featured: false }));
+  assert.equal(featuredGoal(goals), null);
 });
 
 test("addGoal limpa espaços; updateGoal estende o fim e mantém a conclusão", () => {
@@ -143,7 +143,7 @@ test("addGoal limpa espaços; updateGoal estende o fim e mantém a conclusão", 
     title: "Renda",
     start: "2026-11-01",
     end: "2026-12-31",
-    longTerm: false,
+    featured: false,
     completedOn: null,
   });
   goals = toggleGoalDone(goals, "a", TODAY);
@@ -192,8 +192,8 @@ test("linkableGoals: objetivos em andamento, mantendo o já vinculado", () => {
   );
 });
 
-test("successMessage: objetivo de longo prazo com progresso e tempo, ou a frase padrão", () => {
-  const g = goal("g", { title: "Casa", start: MON, end: "2026-12-07", longTerm: true });
+test("successMessage: objetivo em destaque com progresso e tempo, ou a frase padrão", () => {
+  const g = goal("g", { title: "Casa", start: MON, end: "2026-12-07", featured: true });
   const t = task("t", { type: "periodic", weekdays: [1], goalId: "g", linkedOn: MON } as Partial<Task>);
   assert.deepEqual(successMessage([goal("a"), g], [t], [], TODAY), {
     type: "goal",

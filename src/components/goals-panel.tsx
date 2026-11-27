@@ -30,7 +30,7 @@ const period = (start: DayKey, end: DayKey) =>
 
 export function GoalsPanel({ goals, tasks, completions, today, onAdd, onUpdate, onToggle, onRemove }: Props) {
   const [adding, setAdding] = useState(false);
-  const sorted = [...goals].sort((a, b) => Number(b.longTerm) - Number(a.longTerm));
+  const sorted = [...goals].sort((a, b) => Number(b.featured) - Number(a.featured));
 
   return (
     <section className="flex flex-col gap-2.5">
@@ -56,7 +56,7 @@ export function GoalsPanel({ goals, tasks, completions, today, onAdd, onUpdate, 
           {adding && (
             <li className={FORM_ROW}>
               <GoalForm
-                initial={{ title: "", start: today, end: addDays(today, 30), longTerm: false }}
+                initial={{ title: "", start: today, end: addDays(today, 30), featured: false }}
                 onCancel={() => setAdding(false)}
                 onSave={(draft) => {
                   onAdd(draft);
@@ -145,9 +145,9 @@ function GoalItem({
             {goal.title}
           </span>
           <span className="mt-0.5 flex flex-wrap items-center gap-x-2 text-[13px]">
-            {goal.longTerm && (
+            {goal.featured && (
               <span className="flex items-center gap-1 font-medium text-red-600">
-                <TargetIcon className="size-3.5" /> Longo prazo
+                <TargetIcon className="size-3.5" /> Destaque
               </span>
             )}
             <span className={state === "missed" ? "font-semibold text-red-600" : done ? "text-emerald-600" : "text-stone-500"}>
@@ -186,7 +186,7 @@ function GoalForm({
     title: initial.title,
     start: initial.start,
     end: initial.end,
-    longTerm: initial.longTerm,
+    featured: initial.featured,
   });
   const set = (patch: Partial<GoalDraft>) => setDraft((d) => ({ ...d, ...patch }));
   const valid = isValidGoalDraft(draft);
@@ -233,13 +233,13 @@ function GoalForm({
       </div>
       <button
         type="button"
-        aria-pressed={draft.longTerm}
-        onClick={() => set({ longTerm: !draft.longTerm })}
+        aria-pressed={draft.featured}
+        onClick={() => set({ featured: !draft.featured })}
         className={`flex h-9 items-center gap-1.5 self-start rounded-xl px-3 text-[13px] font-semibold transition ${
-          draft.longTerm ? "bg-red-50 text-red-600" : "text-stone-400 hover:bg-stone-100 hover:text-stone-700"
+          draft.featured ? "bg-red-50 text-red-600" : "text-stone-400 hover:bg-stone-100 hover:text-stone-700"
         }`}
       >
-        <TargetIcon className="size-4" /> Longo prazo
+        <TargetIcon className="size-4" /> Destaque
       </button>
       <FormActions valid={valid} onCancel={onCancel} />
     </form>

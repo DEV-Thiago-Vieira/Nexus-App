@@ -88,7 +88,7 @@ test("vínculo para objetivo inexistente é limpo ao carregar", () => {
       { id: "a", text: "a", priority: false, type: "normal", doneOn: null, goalId: "sumiu", linkedOn: TODAY },
       { id: "b", text: "b", priority: false, type: "normal", doneOn: null, goalId: "g", linkedOn: TODAY },
     ],
-    goals: [{ id: "g", title: "g", start: TODAY, end: TODAY, longTerm: false, completedOn: null }],
+    goals: [{ id: "g", title: "g", start: TODAY, end: TODAY, featured: false, completedOn: null }],
     completions: [],
     streak: { length: 0, best: 0, totalCycles: 0, completedDays: 0, lastDay: TODAY },
     showDone: true,
@@ -102,15 +102,15 @@ test("vínculo para objetivo inexistente é limpo ao carregar", () => {
   );
 });
 
-test("mais de um objetivo de longo prazo salvo: mantém só o primeiro", () => {
-  const g = (id: string) => ({ id, title: id, start: TODAY, end: TODAY, longTerm: true, completedOn: null });
+test("mais de um objetivo em destaque salvo: mantém só o primeiro", () => {
+  const g = (id: string) => ({ id, title: id, start: TODAY, end: TODAY, featured: true, completedOn: null });
   const raw = JSON.stringify({
     tasks: [],
     goals: [g("a"), g("b")],
     streak: { length: 0, best: 0, totalCycles: 0, completedDays: 0, lastDay: TODAY },
   });
   assert.deepEqual(
-    parseState(raw, TODAY).goals.map((x) => x.longTerm),
+    parseState(raw, TODAY).goals.map((x) => x.featured),
     [true, false],
   );
 });
@@ -123,8 +123,8 @@ test("formato novo é lido como está", () => {
       { id: "s", text: "s", priority: true, type: "scheduled", date: "2026-02-01", doneOn: null, goalId: "g", linkedOn: "2026-01-03" },
     ],
     goals: [
-      { id: "g", title: "Renda", start: "2026-01-01", end: "2026-12-31", longTerm: true, completedOn: null },
-      { id: "g2", title: "Curso", start: "2026-01-01", end: "2026-06-30", longTerm: false, completedOn: "2026-05-01" },
+      { id: "g", title: "Renda", start: "2026-01-01", end: "2026-12-31", featured: true, completedOn: null },
+      { id: "g2", title: "Curso", start: "2026-01-01", end: "2026-06-30", featured: false, completedOn: "2026-05-01" },
     ],
     completions: [
       { taskId: "i", goalId: "g", day: "2026-01-05", once: false },
@@ -151,12 +151,12 @@ test("dados inválidos voltam ao estado inicial", () => {
   assert.equal(migrateTask({ id: "x", text: "x", type: "interval", every: 3, start: "x", doneOn: null }), null);
   assert.equal(migrateTask({ id: "x", text: "x", type: "normal", doneOn: null, goalId: 3, linkedOn: TODAY }), null);
   assert.equal(migrateTask({ id: "x", text: "x", type: "normal", doneOn: null, goalId: "g", linkedOn: "x" }), null);
-  const g = { id: "g", title: "t", start: TODAY, end: TODAY, longTerm: false, completedOn: null };
+  const g = { id: "g", title: "t", start: TODAY, end: TODAY, featured: false, completedOn: null };
   assert.deepEqual(migrateGoal(g), g);
   assert.equal(migrateGoal({ ...g, title: " " }), null);
   assert.equal(migrateGoal({ ...g, start: "x" }), null);
   assert.equal(migrateGoal({ ...g, end: "2026-01-09" }), null);
-  assert.equal(migrateGoal({ ...g, longTerm: 1 }), null);
+  assert.equal(migrateGoal({ ...g, featured: 1 }), null);
   assert.equal(migrateGoal({ ...g, completedOn: "x" }), null);
   assert.equal(migrateCompletion({ taskId: "t", goalId: null, day: "x", once: true }), null);
   assert.equal(migrateCompletion({ taskId: "t", goalId: 1, day: TODAY, once: true }), null);
