@@ -15,11 +15,14 @@ export type Schedule =
 
 export type TaskType = Schedule["type"];
 
+export type TaskLink = { type: "goal" | "habit"; id: string };
+
 /** O que o usuário preenche ao criar ou editar uma tarefa. */
 export type TaskDraft = {
   text: string;
   /** Prioritárias do dia decidem se o dia conta para a sequência. */
   priority: boolean;
+  link: TaskLink | null;
 } & Schedule;
 
 export type Task = {
@@ -27,6 +30,21 @@ export type Task = {
   /** Data (local) em que foi concluída; feita hoje se doneOn === hoje. */
   doneOn: DayKey | null;
 } & TaskDraft;
+
+export type GoalDraft = {
+  title: string;
+  criterion: string;
+  deadline: DayKey;
+  longTerm: boolean;
+};
+
+export type Goal = { id: string; completedOn: DayKey | null } & GoalDraft;
+
+export type GoalState = "active" | "done" | "missed";
+
+export type HabitDraft = { name: string; goalId: string | null };
+
+export type Habit = { id: string } & HabitDraft;
 
 export type Streak = {
   /** Dias seguidos concluídos, confirmados até o fim do dia anterior a lastDay. */
@@ -43,6 +61,8 @@ export type Streak = {
 
 export type AppState = {
   tasks: Task[];
+  goals: Goal[];
+  habits: Habit[];
   streak: Streak;
   /** Olhinho: mostra as concluídas riscadas (true) ou as esconde (false). */
   showDone: boolean;

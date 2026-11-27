@@ -49,7 +49,7 @@ export function TaskItem({ task, today, done, onToggle, onUpdate, onRemove }: Pr
             e.preventDefault();
             const value = text.trim();
             if (!value || !isValidSchedule(draft.schedule)) return;
-            onUpdate({ text: value, priority, ...draft.schedule });
+            onUpdate({ text: value, priority, link: task.link, ...draft.schedule });
             setMode("view");
           }}
           onKeyDown={cancelOnEscape}

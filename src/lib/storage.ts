@@ -1,13 +1,15 @@
 import type { DayKey } from "./dates.ts";
 import { isDayKey } from "./dates.ts";
 import { ALL_WEEKDAYS, isValidInterval } from "./schedule.ts";
-import type { AppState, Task, Weekday } from "./types.ts";
+import type { AppState, Goal, Habit, Task, TaskLink, Weekday } from "./types.ts";
 
 const KEY = "nexus:v1";
 
 export function initialState(today: DayKey): AppState {
   return {
     tasks: [],
+    goals: [],
+    habits: [],
     streak: { length: 0, best: 0, totalCycles: 0, completedDays: 0, lastDay: today },
     showDone: true,
   };
@@ -29,7 +31,9 @@ export function migrateTask(value: unknown): Task | null {
   if (t.doneOn !== null && !isDayKey(t.doneOn)) return null;
   if (t.priority !== undefined && typeof t.priority !== "boolean") return null;
   const priority = (wasRepeating: boolean) => (typeof t.priority === "boolean" ? t.priority : wasRepeating);
-  const base = { id: t.id, text: t.text, doneOn: t.doneOn as DayKey | null };
+  if (t.link !== undefined && t.link !== null && !isTaskLink(t.link)) return null;
+  const link = t.link ? { type: t.link.type, id: t.link.id } : null;
+  const base = { id: t.id, text: t.text, doneOn: t.doneOn as DayKey | null, link };
 
   switch (t.type) {
     case "normal":
@@ -52,15 +56,75 @@ export function migrateTask(value: unknown): Task | null {
   }
 }
 
+function isTaskLink(v: unknown): v is TaskLink {
+  const l = v as Record<string, unknown>;
+  return typeof l === "object" && l !== null && (l.type === "goal" || l.type === "habit") && typeof l.id === "string";
+}
+
+const nonEmpty = (v: unknown): v is string => typeof v === "string" && v.trim() !== "";
+
+export function migrateGoal(value: unknown): Goal | null {
+  if (typeof value !== "object" || value === null) return null;
+  const g = value as Record<string, unknown>;
+  if (
+    typeof g.id !== "string" ||
+    !nonEmpty(g.title) ||
+    !nonEmpty(g.criterion) ||
+    !isDayKey(g.deadline) ||
+    typeof g.longTerm !== "boolean" ||
+    (g.completedOn !== null && !isDayKey(g.completedOn))
+  ) {
+    return null;
+  }
+  return {
+    id: g.id,
+    title: g.title,
+    criterion: g.criterion,
+    deadline: g.deadline,
+    longTerm: g.longTerm,
+    completedOn: g.completedOn as DayKey | null,
+  };
+}
+
+export function migrateHabit(value: unknown): Habit | null {
+  if (typeof value !== "object" || value === null) return null;
+  const h = value as Record<string, unknown>;
+  if (typeof h.id !== "string" || !nonEmpty(h.name) || (h.goalId !== null && typeof h.goalId !== "string")) return null;
+  return { id: h.id, name: h.name, goalId: h.goalId };
+}
+
+function parseList<T>(value: unknown, parse: (v: unknown) => T | null): T[] | null {
+  if (value === undefined) return [];
+  if (!Array.isArray(value)) return null;
+  const items = value.map(parse);
+  return items.every((x) => x !== null) ? (items as T[]) : null;
+}
+
+function sanitize(tasks: Task[], goals: Goal[], habits: Habit[]) {
+  const firstLongTerm = goals.find((g) => g.longTerm)?.id;
+  const cleanGoals = goals.map((g) => (g.longTerm && g.id !== firstLongTerm ? { ...g, longTerm: false } : g));
+  const goalIds = new Set(goals.map((g) => g.id));
+  const habitIds = new Set(habits.map((h) => h.id));
+  const exists = (l: TaskLink) => (l.type === "goal" ? goalIds : habitIds).has(l.id);
+  return {
+    goals: cleanGoals,
+    habits: habits.map((h) => (h.goalId !== null && !goalIds.has(h.goalId) ? { ...h, goalId: null } : h)),
+    tasks: tasks.map((t) => (t.link && !exists(t.link) ? { ...t, link: null } : t)),
+  };
+}
+
 export function parseState(raw: string | null, today: DayKey): AppState {
   if (!raw) return initialState(today);
   try {
     const data = JSON.parse(raw) as Partial<AppState>;
     const s = data.streak;
-    const tasks = Array.isArray(data.tasks) ? data.tasks.map(migrateTask) : null;
+    const tasks = Array.isArray(data.tasks) ? parseList(data.tasks, migrateTask) : null;
+    const goals = parseList(data.goals, migrateGoal);
+    const habits = parseList(data.habits, migrateHabit);
     if (
       !tasks ||
-      !tasks.every((t) => t !== null) ||
+      !goals ||
+      !habits ||
       typeof s?.length !== "number" ||
       typeof s.totalCycles !== "number" ||
       !isDayKey(s.lastDay)
@@ -70,7 +134,7 @@ export function parseState(raw: string | null, today: DayKey): AppState {
     // Campos adicionados depois da primeira versão: preenche com valores seguros.
     const num = (v: unknown, fallback: number) => (typeof v === "number" && v >= 0 ? v : fallback);
     return {
-      tasks: tasks as Task[],
+      ...sanitize(tasks, goals, habits),
       streak: {
         length: s.length,
         best: Math.max(num(s.best, 0), s.length),

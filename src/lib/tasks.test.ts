@@ -13,6 +13,7 @@ const many = (spec: string): Task[] =>
     text: id,
     priority: false,
     doneOn: null,
+    link: null,
     ...(id === id.toUpperCase() ? PERIODIC : { type: "normal" as const }),
   }));
 
@@ -42,7 +43,7 @@ const schedules: Schedule[] = [
 ];
 for (const schedule of schedules) {
   test(`concluir tarefa ${schedule.type} registra a data de hoje (fica na lista, riscada)`, () => {
-    let tasks = addTask([], "1", { text: "x", priority: false, ...schedule });
+    let tasks = addTask([], "1", { text: "x", priority: false, link: null, ...schedule });
     tasks = toggleTask(tasks, "1", D);
     assert.equal(tasks.length, 1);
     assert.equal(tasks[0].doneOn, D);
@@ -52,22 +53,33 @@ for (const schedule of schedules) {
 }
 
 test("editar tipo limpa a conclusão; editar texto, prioridade ou dias mantém", () => {
-  let tasks = toggleTask(addTask([], "1", { text: "x", priority: false, ...PERIODIC }), "1", D);
-  tasks = updateTask(tasks, "1", { text: "y", priority: true, type: "periodic", weekdays: [1, 3, 5] });
-  assert.deepEqual(tasks[0], { id: "1", text: "y", priority: true, type: "periodic", weekdays: [1, 3, 5], doneOn: D });
-  tasks = updateTask(tasks, "1", { text: "y", priority: true, type: "interval", every: 3, start: D });
-  assert.deepEqual(tasks[0], { id: "1", text: "y", priority: true, type: "interval", every: 3, start: D, doneOn: null });
-  tasks = updateTask(tasks, "1", { text: "y", priority: false, type: "scheduled", date: "2026-02-01" });
-  assert.deepEqual(tasks[0], { id: "1", text: "y", priority: false, type: "scheduled", date: "2026-02-01", doneOn: null });
-  tasks = updateTask(tasks, "1", { text: "y", priority: false, type: "normal" });
-  assert.deepEqual(tasks[0], { id: "1", text: "y", priority: false, type: "normal", doneOn: null }); // sem campos antigos
+  let tasks = toggleTask(addTask([], "1", { text: "x", priority: false, link: null, ...PERIODIC }), "1", D);
+  tasks = updateTask(tasks, "1", { text: "y", priority: true, link: null, type: "periodic", weekdays: [1, 3, 5] });
+  assert.deepEqual(tasks[0], { id: "1", text: "y", priority: true, link: null, type: "periodic", weekdays: [1, 3, 5], doneOn: D });
+  tasks = updateTask(tasks, "1", { text: "y", priority: true, link: null, type: "interval", every: 3, start: D });
+  assert.deepEqual(tasks[0], { id: "1", text: "y", priority: true, link: null, type: "interval", every: 3, start: D, doneOn: null });
+  tasks = updateTask(tasks, "1", { text: "y", priority: false, link: null, type: "scheduled", date: "2026-02-01" });
+  assert.deepEqual(tasks[0], { id: "1", text: "y", priority: false, link: null, type: "scheduled", date: "2026-02-01", doneOn: null });
+  tasks = updateTask(tasks, "1", { text: "y", priority: false, link: null, type: "normal" });
+  assert.deepEqual(tasks[0], { id: "1", text: "y", priority: false, link: null, type: "normal", doneOn: null }); // sem campos antigos
 });
 
 test("scheduleOf extrai só o agendamento", () => {
-  const [t] = addTask([], "1", { text: "x", priority: true, type: "scheduled", date: D });
+  const [t] = addTask([], "1", { text: "x", priority: true, link: null, type: "scheduled", date: D });
   assert.deepEqual(scheduleOf(t), { type: "scheduled", date: D });
 });
 
 test("remover", () => {
-  assert.deepEqual(removeTask(addTask([], "1", { text: "x", priority: false, type: "normal" }), "1"), []);
+  assert.deepEqual(removeTask(addTask([], "1", { text: "x", priority: false, link: null, type: "normal" }), "1"), []);
+});
+
+test("vínculo: criar e editar troca o vínculo sem perder a conclusão", () => {
+  let tasks = addTask([], "1", { text: "x", priority: false, link: { type: "goal", id: "g" }, type: "normal" });
+  assert.deepEqual(tasks[0].link, { type: "goal", id: "g" });
+  tasks = toggleTask(tasks, "1", D);
+  tasks = updateTask(tasks, "1", { text: "x", priority: false, link: { type: "habit", id: "h" }, type: "normal" });
+  assert.deepEqual(tasks[0].link, { type: "habit", id: "h" });
+  assert.equal(tasks[0].doneOn, D);
+  tasks = updateTask(tasks, "1", { text: "x", priority: false, link: null, type: "normal" });
+  assert.equal(tasks[0].link, null);
 });

@@ -25,7 +25,7 @@ export function TaskForm({ today, onAdd }: { today: DayKey; onAdd: (draft: TaskD
           e.preventDefault();
           const value = text.trim();
           if (!value || !isValidSchedule(draft.schedule)) return;
-          onAdd({ text: value, priority, ...draft.schedule });
+          onAdd({ text: value, priority, link: null, ...draft.schedule });
           setText("");
         }}
       >
