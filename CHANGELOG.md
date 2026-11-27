@@ -5,6 +5,7 @@
 ### O que mudou
 
 - **Objetivos** com título, data de início e data de fim. Um deles pode ser marcado como **objetivo em destaque**.
+- Objetivos podem ser **reordenados arrastando**, como as tarefas.
 - **Vínculo de tarefas a objetivos** (opcional), no formulário de criar e de editar. A lista do dia mostra o objetivo vinculado discretamente.
 - **Progresso do objetivo** calculado a partir das tarefas vinculadas.
 - **Mensagem de sucesso**: ao concluir o dia, mostra o objetivo em destaque com o progresso e o tempo restante; sem ele, a frase *"Fazer o mínimo todos os dias é melhor que fazer muito e não acabar nada."*
@@ -57,6 +58,8 @@
 - O script tem teste: ele é executado com `localStorage` e `matchMedia` simulados e precisa dar o mesmo resultado de `resolveTheme`.
 
 **Paleta escura por variáveis.** Em vez de espalhar `dark:` por todos os componentes, o tema escuro redefine as variáveis de cor do Tailwind (`--color-stone-*`, `--color-white`, `--color-red-*`, `--color-emerald-*`) sob `[data-theme="dark"]`. As ilustrações passaram a usar classes de cor em vez de hexadecimais fixos nos tons neutros.
+
+**Arrastar para reordenar compartilhado.** A configuração de arrastar (sensores de toque, mouse e teclado, e anúncios para leitor de tela) saiu da lista de tarefas para `SortableList`, usada por tarefas e objetivos. A reordenação em si é uma função pura (`moveById`). Com a ordem manual, o objetivo em destaque não é mais fixado no topo.
 
 **Componentes compartilhados.** Checkbox redondo, ações de item, botões de formulário, confirmação de remoção e estilos de card foram extraídos para `ui.tsx` e são usados por tarefas e objetivos.
 
