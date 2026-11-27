@@ -10,8 +10,8 @@ O Nexus centraliza a vida produtiva em um só lugar: as atividades do dia, o que
 | --- | --- | --- |
 | v1.0 | Tarefas e sequência | ✅ Entregue |
 | v1.1 | Agendamento e regra de dia feito | ✅ Entregue |
-| v1.2 | Objetivos e hábitos | ⏳ Próxima |
-| v1.3 | Aba de progresso | Planejada |
+| v1.2 | Objetivos, horários e modo escuro | ✅ Entregue |
+| v1.3 | Aba de progresso | ⏳ Próxima |
 | v2.0 | Conta e sincronização | Planejada (mínimo) |
 | v2.1 | Pomodoro | Planejada |
 | v2.2 | Escrita e galeria | Planejada |
@@ -47,23 +47,20 @@ O Nexus centraliza a vida produtiva em um só lugar: as atividades do dia, o que
 
 ---
 
-## v1.2 — Objetivos e hábitos
+## v1.2 — Objetivos, horários e modo escuro ✅
 
-**Objetivo:** ligar as tarefas do dia a um propósito maior.
-
-**Funcionalidades**
-- Cadastro de **objetivos** (com título, descrição opcional e prazo opcional).
-- Cadastro de **hábitos** (comportamentos repetidos, ex.: "programar", "desenhar").
-- Vincular uma tarefa a um objetivo ou hábito (opcional).
-- Um **objetivo de longo prazo** em destaque, editável.
-- Mensagem de sucesso, ao concluir o dia, exibindo o objetivo de longo prazo. Quando não houver objetivo cadastrado, exibir a frase padrão: *"Fazer o mínimo todos os dias é melhor que fazer muito e não acabar nada."*
-- Bônus: **modo escuro** (alternância manual, preferência salva, padrão do sistema na primeira visita).
-
-**Critérios de pronto**
-- Criar um objetivo, um hábito e vincular tarefas a cada um.
-- Mensagem de sucesso exibe o objetivo de longo prazo.
+- **Objetivos** com título, data de início e data de fim (o fim pode ser estendido); um deles pode ficar em **destaque**.
+- Vínculo opcional de tarefas a um objetivo.
+- **Progresso do objetivo**: ocorrências concluídas das tarefas vinculadas ÷ ocorrências previstas no período. Concluído quando tudo é feito ou marcado manualmente; não alcançado depois do fim.
+- Registro de cada conclusão de tarefa (base para a aba de progresso).
+- Mensagem de sucesso com o objetivo em destaque (progresso e tempo restante) ou a frase padrão: *"Fazer o mínimo todos os dias é melhor que fazer muito e não acabar nada."*
+- **Horário opcional** em agendadas e periódicas, com aviso por notificação enquanto o app está aberto.
+- Abas Hoje / Objetivos.
+- **Modo escuro** (alternância manual, preferência salva, padrão do sistema na primeira visita).
 - Migração dos dados da v1.1 sem perda.
-- Testes da lógica de vínculo.
+- Hábitos foram planejados, mas saíram do escopo: duplicavam o papel das tarefas periódicas.
+
+---
 
 ## v1.3 — Aba de progresso
 
@@ -71,12 +68,12 @@ O Nexus centraliza a vida produtiva em um só lugar: as atividades do dia, o que
 
 **Funcionalidades**
 - Totais: dias concluídos, melhor sequência, ciclos completos.
-- Frequência de cada hábito (por semana e por mês).
+- Frequência das tarefas periódicas (por semana e por mês).
 - Objetivos concluídos.
 - **Mapa de calor anual** (um quadrado por dia, intensidade proporcional ao que foi concluído), no estilo do gráfico de contribuições do GitHub.
 
 **Critérios de pronto**
-- Métricas calculadas a partir das datas de conclusão já registradas desde a v1.1.
+- Métricas calculadas a partir do registro de conclusões, mantido desde a v1.2.
 - Funções de agregação puras e testadas.
 - Visualização legível no celular.
 
@@ -89,14 +86,14 @@ O Nexus centraliza a vida produtiva em um só lugar: as atividades do dia, o que
 **Funcionalidades**
 - Cadastro, login e logout.
 - Dados armazenados em banco de dados no servidor.
-- API para tarefas, objetivos, hábitos e sequência.
+- API para tarefas, objetivos e sequência.
 - Sincronização entre celular e computador.
 - Migração dos dados do `localStorage` para a conta no primeiro login.
 - Funcionamento básico offline, com sincronização ao reconectar (desejável).
 
 **Notas técnicas**
 - Autenticação com biblioteca consolidada; senhas nunca armazenadas em texto puro.
-- Modelagem relacional sugerida: `users`, `tasks`, `task_completions`, `goals`, `habits`.
+- Modelagem relacional sugerida: `users`, `tasks`, `task_completions`, `goals`.
 - Regras de negócio (agendamento, sequência) continuam em funções puras, reaproveitadas no servidor.
 - Cada usuário acessa apenas os próprios dados (verificação em toda rota da API).
 - Segredos apenas em variáveis de ambiente.
@@ -114,7 +111,7 @@ O Nexus centraliza a vida produtiva em um só lugar: as atividades do dia, o que
 - Cronômetro com foco de 25 min e pausas de 5/15 min (todos ajustáveis).
 - Vínculo opcional com uma tarefa.
 - Pausar, retomar e encerrar antes do fim.
-- Tempo total registrado por tarefa e por hábito, exibido na aba de progresso.
+- Tempo total registrado por tarefa e por objetivo, exibido na aba de progresso.
 
 ## v2.2 — Escrita e galeria
 
@@ -129,7 +126,7 @@ O Nexus centraliza a vida produtiva em um só lugar: as atividades do dia, o que
 ## v2.3 — Agenda e notificações
 
 - Visões de dia, mês e ano com as atividades planejadas.
-- Notificações próprias via PWA (lembretes de tarefas agendadas e do fim do dia).
+- Notificações via push, mesmo com o app fechado (lembretes de tarefas com horário e do fim do dia). A v1.2 já avisa enquanto o app está aberto.
 - Preferências de notificação por usuário.
 
 ---
