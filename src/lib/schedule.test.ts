@@ -29,9 +29,9 @@ test("agendada aparece a partir da data", () => {
 
 test("tasksForDay filtra mantendo a ordem", () => {
   const tasks: Task[] = [
-    { id: "a", text: "a", priority: false, doneOn: null, link: null, type: "periodic", weekdays: [2] },
-    { id: "b", text: "b", priority: false, doneOn: null, link: null, type: "normal" },
-    { id: "c", text: "c", priority: false, doneOn: null, link: null, type: "scheduled", date: WED },
+    { id: "a", text: "a", priority: false, doneOn: null, goalId: null, linkedOn: null, type: "periodic", weekdays: [2] },
+    { id: "b", text: "b", priority: false, doneOn: null, goalId: null, linkedOn: null, type: "normal" },
+    { id: "c", text: "c", priority: false, doneOn: null, goalId: null, linkedOn: null, type: "scheduled", date: WED },
   ];
   assert.deepEqual(tasksForDay(tasks, MON).map((t) => t.id), ["b"]);
   assert.deepEqual(tasksForDay(tasks, TUE).map((t) => t.id), ["a", "b"]);

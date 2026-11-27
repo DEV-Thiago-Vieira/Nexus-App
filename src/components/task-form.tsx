@@ -3,9 +3,9 @@
 import { useState } from "react";
 import type { DayKey } from "@/lib/dates.ts";
 import { isValidSchedule } from "@/lib/schedule.ts";
-import type { TaskDraft, TaskLink } from "@/lib/types.ts";
+import type { TaskDraft } from "@/lib/types.ts";
 import { RepeatIcon, TargetIcon } from "./icons";
-import { hasLinkTargets, LinkSelect, useLinks } from "./link-field";
+import { GoalSelect, useCanLink } from "./link-field";
 import { KIND_LABELS, PriorityToggle, ScheduleFields, useScheduleDraft, type Kind } from "./schedule-fields";
 
 const NEXT_KIND: Record<Kind, Kind> = { normal: "periodic", periodic: "scheduled", scheduled: "normal" };
@@ -14,9 +14,9 @@ const NEXT_KIND: Record<Kind, Kind> = { normal: "periodic", periodic: "scheduled
 export function TaskForm({ today, onAdd }: { today: DayKey; onAdd: (draft: TaskDraft) => void }) {
   const [text, setText] = useState("");
   const [priority, setPriority] = useState(false);
-  const [link, setLink] = useState<TaskLink | null>(null);
+  const [goalId, setGoalId] = useState<string | null>(null);
   const [linkOpen, setLinkOpen] = useState(false);
-  const canLink = hasLinkTargets(useLinks());
+  const canLink = useCanLink();
   const draft = useScheduleDraft(today);
   const { kind } = draft;
   const canSubmit = text.trim() !== "" && isValidSchedule(draft.schedule);
@@ -29,7 +29,7 @@ export function TaskForm({ today, onAdd }: { today: DayKey; onAdd: (draft: TaskD
           e.preventDefault();
           const value = text.trim();
           if (!value || !isValidSchedule(draft.schedule)) return;
-          onAdd({ text: value, priority, link, ...draft.schedule });
+          onAdd({ text: value, priority, goalId, ...draft.schedule });
           setText("");
         }}
       >
@@ -38,9 +38,9 @@ export function TaskForm({ today, onAdd }: { today: DayKey; onAdd: (draft: TaskD
             <ScheduleFields draft={draft} />
           </div>
         )}
-        {canLink && (linkOpen || link) && (
+        {canLink && (linkOpen || goalId) && (
           <div className="flex px-1 motion-safe:animate-rise">
-            <LinkSelect value={link} onChange={setLink} className="max-w-full" />
+            <GoalSelect value={goalId} onChange={setGoalId} className="max-w-full" />
           </div>
         )}
         <div className="flex items-center gap-2">
@@ -66,12 +66,12 @@ export function TaskForm({ today, onAdd }: { today: DayKey; onAdd: (draft: TaskD
             {canLink && (
               <button
                 type="button"
-                aria-label="Vincular a um objetivo ou hábito"
-                aria-expanded={linkOpen || link !== null}
+                aria-label="Vincular a um objetivo"
+                aria-expanded={linkOpen || goalId !== null}
                 onPointerDown={(e) => e.preventDefault()}
                 onClick={() => setLinkOpen((o) => !o)}
                 className={`flex size-9 shrink-0 items-center justify-center rounded-xl transition ${
-                  link ? "bg-stone-100 text-stone-700" : "text-stone-400 hover:bg-stone-100 hover:text-stone-700"
+                  goalId ? "bg-stone-100 text-stone-700" : "text-stone-400 hover:bg-stone-100 hover:text-stone-700"
                 }`}
               >
                 <TargetIcon className="size-4" />

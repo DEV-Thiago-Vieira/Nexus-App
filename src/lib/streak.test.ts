@@ -14,14 +14,14 @@ const per = (
   doneOn: string | null = null,
   weekdays: Weekday[] = ALL_WEEKDAYS,
   priority = true,
-): Task => ({ id, text: id, priority, type: "periodic", weekdays, doneOn, link: null });
+): Task => ({ id, text: id, priority, type: "periodic", weekdays, doneOn, goalId: null, linkedOn: null });
 const normal = (id: string, doneOn: string | null = null, priority = false): Task => ({
   id,
   text: id,
   priority,
   type: "normal",
   doneOn,
-  link: null,
+  goalId: null, linkedOn: null,
 });
 const sched = (id: string, date: string, doneOn: string | null = null, priority = false): Task => ({
   id,
@@ -30,7 +30,7 @@ const sched = (id: string, date: string, doneOn: string | null = null, priority 
   type: "scheduled",
   date,
   doneOn,
-  link: null,
+  goalId: null, linkedOn: null,
 });
 const every = (id: string, n: number, start: string, doneOn: string | null = null, priority = true): Task => ({
   id,
@@ -40,13 +40,13 @@ const every = (id: string, n: number, start: string, doneOn: string | null = nul
   every: n,
   start,
   doneOn,
-  link: null,
+  goalId: null, linkedOn: null,
 });
 
 const start = (tasks: Task[] = [per("a")]): AppState => ({
   tasks,
   goals: [],
-  habits: [],
+  completions: [],
   streak: { length: 0, best: 0, totalCycles: 0, completedDays: 0, lastDay: D0 },
   showDone: true,
 });

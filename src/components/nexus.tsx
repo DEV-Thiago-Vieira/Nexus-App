@@ -4,20 +4,17 @@ import { useEffect, useState, useSyncExternalStore } from "react";
 import { fromDayKey, msUntilNextMidnight, toDayKey } from "@/lib/dates.ts";
 import {
   addGoal,
-  addHabit,
   removeGoal,
-  removeHabit,
   successMessage,
   toggleGoalDone,
   updateGoal,
-  updateHabit,
   type SuccessMessage,
 } from "@/lib/goals.ts";
 import { loadState, saveState } from "@/lib/storage.ts";
 import { isRepeating, tasksForDay } from "@/lib/schedule.ts";
 import { dayStatus, progressView, rollover } from "@/lib/streak.ts";
-import { addTask, moveTask, removeTask, toggleTask, updateTask } from "@/lib/tasks.ts";
-import type { AppState, Goal, Habit, Task, TaskDraft } from "@/lib/types.ts";
+import { addTask, moveTask, removeTask, toggleTaskDone, updateTask } from "@/lib/tasks.ts";
+import type { AppState, Goal, Task, TaskDraft } from "@/lib/types.ts";
 import { CheckIcon, EyeIcon, EyeOffIcon, FlagIcon, TargetIcon } from "./icons";
 import { GoalsPanel } from "./goals-panel";
 import { AllDoneIllustration, EmptyIllustration } from "./illustrations";
@@ -93,7 +90,6 @@ function App() {
 
   const setTasks = (fn: (tasks: Task[]) => Task[]) => setState((s) => ({ ...s, tasks: fn(s.tasks) }));
   const setGoals = (fn: (goals: Goal[]) => Goal[]) => setState((s) => ({ ...s, goals: fn(s.goals) }));
-  const setHabits = (fn: (habits: Habit[]) => Habit[]) => setState((s) => ({ ...s, habits: fn(s.habits) }));
 
   const view = progressView(state.streak, state.tasks, today);
   const dateLabel = fromDayKey(today).toLocaleDateString("pt-BR", { weekday: "long", day: "numeric", month: "long" });
@@ -101,8 +97,8 @@ function App() {
   const listProps = {
     today,
     onMove: (id: string, overId: string) => setTasks((ts) => moveTask(ts, id, overId)),
-    onToggle: (id: string) => setTasks((ts) => toggleTask(ts, id, today)),
-    onUpdate: (id: string, draft: TaskDraft) => setTasks((ts) => updateTask(ts, id, draft)),
+    onToggle: (id: string) => setState((s) => toggleTaskDone(s, id, today)),
+    onUpdate: (id: string, draft: TaskDraft) => setTasks((ts) => updateTask(ts, id, draft, today)),
     onRemove: (id: string) => setTasks((ts) => removeTask(ts, id)),
   };
 
@@ -118,7 +114,7 @@ function App() {
   const dayDone = dayStatus(state.tasks, today) === "done";
 
   return (
-    <LinksProvider value={{ goals: state.goals, habits: state.habits, today }}>
+    <LinksProvider value={{ goals: state.goals, tasks: state.tasks, completions: state.completions, today }}>
       <Progress view={view} dateLabel={dateLabel} />
       <main className={MAIN}>
         <div className="-mb-2 flex items-center justify-between gap-3">
@@ -128,15 +124,13 @@ function App() {
         {tab === "goals" ? (
           <GoalsPanel
             goals={state.goals}
-            habits={state.habits}
+            tasks={state.tasks}
+            completions={state.completions}
             today={today}
-            onAddGoal={(draft) => setGoals((gs) => addGoal(gs, newId(), draft))}
-            onUpdateGoal={(id, draft) => setGoals((gs) => updateGoal(gs, id, draft))}
-            onToggleGoal={(id) => setGoals((gs) => toggleGoalDone(gs, id, today))}
-            onRemoveGoal={(id) => setState((s) => removeGoal(s, id))}
-            onAddHabit={(draft) => setHabits((hs) => addHabit(hs, newId(), draft))}
-            onUpdateHabit={(id, draft) => setHabits((hs) => updateHabit(hs, id, draft))}
-            onRemoveHabit={(id) => setState((s) => removeHabit(s, id))}
+            onAdd={(draft) => setGoals((gs) => addGoal(gs, newId(), draft))}
+            onUpdate={(id, draft) => setGoals((gs) => updateGoal(gs, id, draft))}
+            onToggle={(id) => setGoals((gs) => toggleGoalDone(gs, id, today))}
+            onRemove={(id) => setState((s) => removeGoal(s, id))}
           />
         ) : (
           <>
@@ -157,7 +151,7 @@ function App() {
                 {allDone && (
                   <AllDone
                     streakDays={view.streakDays}
-                    message={successMessage(state.goals, today)}
+                    message={successMessage(state.goals, state.tasks, state.completions, today)}
                     compact={visible.length > 0}
                   />
                 )}
@@ -170,7 +164,7 @@ function App() {
           </>
         )}
       </main>
-      {tab === "today" && <TaskForm today={today} onAdd={(draft) => setTasks((ts) => addTask(ts, newId(), draft))} />}
+      {tab === "today" && <TaskForm today={today} onAdd={(draft) => setTasks((ts) => addTask(ts, newId(), draft, today))} />}
     </LinksProvider>
   );
 }
@@ -274,7 +268,9 @@ function AllDone({ streakDays, message, compact }: { streakDays: number; message
               <TargetIcon className="size-3.5" /> Objetivo de longo prazo
             </span>
             <span className="font-semibold text-stone-900">{message.title}</span>
-            <span className="text-[13px] text-stone-500">{message.detail}</span>
+            <span className="text-[13px] text-stone-500">
+              {message.progress} · {message.time}
+            </span>
           </p>
         ) : (
           <p className="mt-3 text-sm leading-relaxed text-stone-500 italic">“{message.text}”</p>

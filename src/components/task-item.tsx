@@ -6,9 +6,9 @@ import { CSS } from "@dnd-kit/utilities";
 import { fromDayKey, type DayKey } from "@/lib/dates.ts";
 import { isValidSchedule, scheduledState } from "@/lib/schedule.ts";
 import { scheduleOf } from "@/lib/tasks.ts";
-import type { Task, TaskDraft, TaskLink } from "@/lib/types.ts";
+import type { Task, TaskDraft } from "@/lib/types.ts";
 import { FlagIcon, GripIcon } from "./icons";
-import { hasLinkTargets, LinkBadge, LinkSelect, useLinks } from "./link-field";
+import { GoalBadge, GoalSelect, useCanLink } from "./link-field";
 import { PriorityToggle, ScheduleFields, useScheduleDraft } from "./schedule-fields";
 import { TypeToggle } from "./type-toggle";
 import { ConfirmRemove, FormActions, ItemActions, ROW, RoundCheckbox } from "./ui";
@@ -30,8 +30,8 @@ export function TaskItem({ task, today, done, onToggle, onUpdate, onRemove }: Pr
   const [mode, setMode] = useState<Mode>("view");
   const [text, setText] = useState(task.text);
   const [priority, setPriority] = useState(task.priority);
-  const [link, setLink] = useState<TaskLink | null>(task.link);
-  const canLink = hasLinkTargets(useLinks());
+  const [goalId, setGoalId] = useState(task.goalId);
+  const canLink = useCanLink();
   const draft = useScheduleDraft(today, scheduleOf(task));
   const canSave = text.trim() !== "" && isValidSchedule(draft.schedule);
 
@@ -52,7 +52,7 @@ export function TaskItem({ task, today, done, onToggle, onUpdate, onRemove }: Pr
             e.preventDefault();
             const value = text.trim();
             if (!value || !isValidSchedule(draft.schedule)) return;
-            onUpdate({ text: value, priority, link, ...draft.schedule });
+            onUpdate({ text: value, priority, goalId, ...draft.schedule });
             setMode("view");
           }}
           onKeyDown={cancelOnEscape}
@@ -72,7 +72,7 @@ export function TaskItem({ task, today, done, onToggle, onUpdate, onRemove }: Pr
             <PriorityToggle value={priority} onChange={setPriority} withLabel className="h-11 px-3" />
           </div>
           <ScheduleFields draft={draft} />
-          {(canLink || link) && <LinkSelect value={link} onChange={setLink} className="self-start" />}
+          {(canLink || goalId) && <GoalSelect value={goalId} onChange={setGoalId} className="self-start" />}
           <FormActions valid={canSave} onCancel={() => setMode("view")} />
         </form>
       </li>
@@ -110,7 +110,7 @@ export function TaskItem({ task, today, done, onToggle, onUpdate, onRemove }: Pr
           >
             {task.text}
           </span>
-          {(task.priority || task.type === "scheduled" || task.link) && (
+          {(task.priority || task.type === "scheduled" || task.goalId) && (
             <span className="mt-0.5 flex flex-wrap items-center gap-x-2 text-[13px]">
               {task.priority && (
                 <span className="flex items-center gap-1 font-medium text-red-600">
@@ -118,7 +118,7 @@ export function TaskItem({ task, today, done, onToggle, onUpdate, onRemove }: Pr
                 </span>
               )}
               {task.type === "scheduled" && <ScheduledDate date={task.date} today={today} done={done} />}
-              <LinkBadge link={task.link} />
+              <GoalBadge goalId={task.goalId} />
             </span>
           )}
         </span>
@@ -129,7 +129,7 @@ export function TaskItem({ task, today, done, onToggle, onUpdate, onRemove }: Pr
         onEdit={() => {
           setText(task.text);
           setPriority(task.priority);
-          setLink(task.link);
+          setGoalId(task.goalId);
           draft.reset(scheduleOf(task));
           setMode("edit");
         }}

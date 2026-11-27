@@ -1,70 +1,110 @@
 import { test } from "node:test";
 import assert from "node:assert/strict";
+import { ALL_WEEKDAYS } from "./schedule.ts";
 import {
   addGoal,
-  addHabit,
-  daysLeft,
-  deadlineLabel,
-  decodeLink,
-  encodeLink,
+  goalProgress,
   goalState,
   isValidGoalDraft,
-  isValidHabitDraft,
-  linkLabel,
-  linkOptions,
+  linkableGoals,
   longTermGoal,
+  progressLabel,
   removeGoal,
-  removeHabit,
+  statusLabel,
   successMessage,
+  timeLabel,
   toggleGoalDone,
   updateGoal,
-  updateHabit,
 } from "./goals.ts";
-import type { AppState, Goal, GoalDraft, Habit, Task } from "./types.ts";
+import type { AppState, Completion, Goal, GoalDraft, Task } from "./types.ts";
 
 const TODAY = "2026-11-27";
+const MON = "2026-11-30";
 
 const draft = (over: Partial<GoalDraft> = {}): GoalDraft => ({
   title: "Renda",
-  criterion: "R$ 11 mil líquidos por mês",
-  deadline: "2026-12-31",
+  start: "2026-11-01",
+  end: "2026-12-31",
   longTerm: false,
   ...over,
 });
 
 const goal = (id: string, over: Partial<Goal> = {}): Goal => ({ id, ...draft(), completedOn: null, ...over });
 
-const task = (id: string, link: Task["link"] = null): Task => ({
-  id,
-  text: id,
-  priority: false,
-  type: "normal",
-  doneOn: null,
-  link,
+const task = (id: string, over: Partial<Task> = {}): Task =>
+  ({ id, text: id, priority: false, type: "normal", doneOn: null, goalId: null, linkedOn: null, ...over }) as Task;
+
+const done = (taskId: string, day: string, goalId: string | null = "g", once = false): Completion => ({
+  taskId,
+  goalId,
+  day,
+  once,
 });
 
 const state = (over: Partial<AppState> = {}): AppState => ({
   tasks: [],
   goals: [],
-  habits: [],
+  completions: [],
   streak: { length: 0, best: 0, totalCycles: 0, completedDays: 0, lastDay: TODAY },
   showDone: true,
   ...over,
 });
 
-
-test("goalState: em andamento até o prazo (inclusive), não alcançado depois, concluído se marcado", () => {
-  assert.equal(goalState(goal("g", { deadline: "2026-12-31" }), TODAY), "active");
-  assert.equal(goalState(goal("g", { deadline: TODAY }), TODAY), "active");
-  assert.equal(goalState(goal("g", { deadline: "2026-11-26" }), TODAY), "missed");
-  assert.equal(goalState(goal("g", { completedOn: "2026-11-20" }), TODAY), "done");
-  assert.equal(goalState(goal("g", { deadline: "2026-11-01", completedOn: "2026-11-20" }), TODAY), "done");
+test("goalProgress: periódica conta cada dia em que vale, do vínculo até o fim", () => {
+  const g = goal("g", { start: MON, end: "2026-12-13" });
+  const mwf = task("t", { type: "periodic", weekdays: [1, 3, 5], goalId: "g", linkedOn: TODAY } as Partial<Task>);
+  const completions = [done("t", MON), done("t", "2026-12-02"), done("t", "2026-12-01")];
+  assert.deepEqual(goalProgress(g, [mwf], completions), { done: 2, total: 6 });
 });
 
-test("daysLeft: dias até o prazo (0 no dia, negativo depois)", () => {
-  assert.equal(daysLeft(goal("g", { deadline: "2026-12-31" }), TODAY), 34);
-  assert.equal(daysLeft(goal("g", { deadline: TODAY }), TODAY), 0);
-  assert.equal(daysLeft(goal("g", { deadline: "2026-11-25" }), TODAY), -2);
+test("goalProgress: vínculo feito depois do início conta só a partir do vínculo", () => {
+  const g = goal("g", { start: "2026-11-01", end: "2026-11-30" });
+  const daily = task("t", { type: "periodic", weekdays: ALL_WEEKDAYS, goalId: "g", linkedOn: TODAY } as Partial<Task>);
+  assert.deepEqual(goalProgress(g, [daily], [done("t", TODAY)]), { done: 1, total: 4 });
+});
+
+test("goalProgress: a cada X dias segue o calendário da tarefa dentro do período", () => {
+  const g = goal("g", { start: MON, end: "2026-12-09" });
+  const every3 = task("t", { type: "interval", every: 3, start: "2026-11-29", goalId: "g", linkedOn: MON } as Partial<Task>);
+  assert.deepEqual(goalProgress(g, [every3], [done("t", "2026-12-02")]), { done: 1, total: 3 });
+});
+
+test("goalProgress: normal e agendada valem uma ocorrência, mesmo depois de removidas da lista", () => {
+  const g = goal("g");
+  const pending = task("n", { goalId: "g", linkedOn: TODAY });
+  const scheduled = task("s", { type: "scheduled", date: "2026-12-10", goalId: "g", linkedOn: TODAY } as Partial<Task>);
+  const gone = done("sumiu", "2026-11-20", "g", true);
+  assert.deepEqual(goalProgress(g, [pending, scheduled], [gone]), { done: 1, total: 3 });
+});
+
+test("goalProgress: ignora tarefas de outros objetivos e conclusões fora do período", () => {
+  const g = goal("g", { start: MON, end: "2026-12-06" });
+  const mine = task("a", { type: "periodic", weekdays: [1], goalId: "g", linkedOn: MON } as Partial<Task>);
+  const other = task("b", { type: "periodic", weekdays: [1], goalId: "x", linkedOn: MON } as Partial<Task>);
+  const completions = [done("a", "2026-12-07"), done("b", MON, "x"), done("x1", MON, "x", true), done("late", "2027-01-01", "g", true)];
+  assert.deepEqual(goalProgress(g, [mine, other], completions), { done: 0, total: 1 });
+});
+
+test("goalState: concluído quando tudo foi feito ou marcado; não alcançado depois do fim", () => {
+  const g = goal("g", { start: MON, end: "2026-12-06" });
+  const t = task("t", { type: "periodic", weekdays: [1], goalId: "g", linkedOn: MON } as Partial<Task>);
+  assert.equal(goalState(g, [t], [], TODAY), "active");
+  assert.equal(goalState(g, [t], [done("t", MON)], TODAY), "done");
+  assert.equal(goalState(g, [t], [], "2026-12-07"), "missed");
+  assert.equal(goalState(g, [t], [], "2026-12-06"), "active");
+  assert.equal(goalState({ ...g, completedOn: TODAY }, [t], [], "2027-01-01"), "done");
+  assert.equal(goalState(g, [], [], "2027-01-01"), "missed");
+});
+
+test("progressLabel e timeLabel", () => {
+  assert.equal(progressLabel({ done: 5, total: 13 }), "5 de 13 (38%)");
+  assert.equal(progressLabel({ done: 0, total: 0 }), "Nenhuma tarefa vinculada");
+  assert.equal(timeLabel(goal("g", { start: "2026-12-01" }), TODAY), "Começa em 4 dias");
+  assert.equal(timeLabel(goal("g", { start: "2026-11-28" }), TODAY), "Começa amanhã");
+  assert.equal(timeLabel(goal("g", { end: "2026-12-31" }), TODAY), "Faltam 34 dias");
+  assert.equal(timeLabel(goal("g", { end: "2026-11-28" }), TODAY), "Falta 1 dia");
+  assert.equal(timeLabel(goal("g", { end: TODAY }), TODAY), "Termina hoje");
+  assert.equal(timeLabel(goal("g", { end: "2026-11-20" }), TODAY), "Encerrado");
 });
 
 test("toggleGoalDone marca com a data de hoje e desmarca", () => {
@@ -75,7 +115,6 @@ test("toggleGoalDone marca com a data de hoje e desmarca", () => {
   goals = toggleGoalDone(goals, "a", TODAY);
   assert.equal(goals[0].completedOn, null);
 });
-
 
 test("só um objetivo pode ser de longo prazo", () => {
   let goals = addGoal([], "a", draft({ longTerm: true }));
@@ -97,141 +136,80 @@ test("só um objetivo pode ser de longo prazo", () => {
   assert.equal(longTermGoal(goals), null);
 });
 
-test("addGoal limpa espaços e começa em andamento; updateGoal mantém a conclusão", () => {
-  let goals = addGoal([], "a", draft({ title: "  Renda  ", criterion: " 11 mil " }));
+test("addGoal limpa espaços; updateGoal estende o fim e mantém a conclusão", () => {
+  let goals = addGoal([], "a", draft({ title: "  Renda  " }));
   assert.deepEqual(goals[0], {
     id: "a",
     title: "Renda",
-    criterion: "11 mil",
-    deadline: "2026-12-31",
+    start: "2026-11-01",
+    end: "2026-12-31",
     longTerm: false,
     completedOn: null,
   });
   goals = toggleGoalDone(goals, "a", TODAY);
-  goals = updateGoal(goals, "a", draft({ title: "Renda 2" }));
+  goals = updateGoal(goals, "a", draft({ end: "2027-03-31" }));
+  assert.equal(goals[0].end, "2027-03-31");
   assert.equal(goals[0].completedOn, TODAY);
 });
 
-test("validação de objetivo: título, critério e prazo obrigatórios", () => {
+test("validação: título, início e fim obrigatórios, fim não antes do início", () => {
   assert.ok(isValidGoalDraft(draft()));
+  assert.ok(isValidGoalDraft(draft({ start: TODAY, end: TODAY })));
   assert.ok(!isValidGoalDraft(draft({ title: "  " })));
-  assert.ok(!isValidGoalDraft(draft({ criterion: "" })));
-  assert.ok(!isValidGoalDraft(draft({ deadline: "" })));
-  assert.ok(!isValidGoalDraft(draft({ deadline: "2026-02-30" })));
+  assert.ok(!isValidGoalDraft(draft({ start: "" })));
+  assert.ok(!isValidGoalDraft(draft({ end: "2026-02-30" })));
+  assert.ok(!isValidGoalDraft(draft({ start: "2026-12-02", end: "2026-12-01" })));
 });
 
-
-test("hábitos: nome obrigatório, objetivo opcional", () => {
-  assert.ok(isValidHabitDraft({ name: "Programar", goalId: null }));
-  assert.ok(!isValidHabitDraft({ name: " ", goalId: null }));
-  let habits = addHabit([], "h", { name: " Desenhar ", goalId: null });
-  assert.deepEqual(habits, [{ id: "h", name: "Desenhar", goalId: null }]);
-  habits = updateHabit(habits, "h", { name: "Ler", goalId: "g" });
-  assert.deepEqual(habits, [{ id: "h", name: "Ler", goalId: "g" }]);
-});
-
-
-test("remover objetivo: tarefas e hábitos vinculados continuam, sem vínculo", () => {
+test("remover objetivo: tarefas vinculadas continuam, sem vínculo", () => {
   const s = state({
     goals: [goal("g1"), goal("g2")],
-    habits: [
-      { id: "h1", name: "Programar", goalId: "g1" },
-      { id: "h2", name: "Ler", goalId: "g2" },
-    ],
-    tasks: [
-      task("t1", { type: "goal", id: "g1" }),
-      task("t2", { type: "goal", id: "g2" }),
-      task("t3", { type: "habit", id: "h1" }),
-    ],
+    tasks: [task("t1", { goalId: "g1", linkedOn: TODAY }), task("t2", { goalId: "g2", linkedOn: TODAY })],
   });
   const next = removeGoal(s, "g1");
   assert.deepEqual(
     next.goals.map((g) => g.id),
     ["g2"],
   );
-  assert.deepEqual(next.habits, [
-    { id: "h1", name: "Programar", goalId: null },
-    { id: "h2", name: "Ler", goalId: "g2" },
-  ]);
   assert.deepEqual(
-    next.tasks.map((t) => [t.id, t.link]),
+    next.tasks.map((t) => [t.id, t.goalId, t.linkedOn]),
     [
-      ["t1", null],
-      ["t2", { type: "goal", id: "g2" }],
-      ["t3", { type: "habit", id: "h1" }],
+      ["t1", null, null],
+      ["t2", "g2", TODAY],
     ],
   );
 });
 
-test("remover hábito: tarefas vinculadas continuam, sem vínculo", () => {
-  const s = state({
-    habits: [{ id: "h1", name: "Programar", goalId: null } satisfies Habit],
-    tasks: [task("t1", { type: "habit", id: "h1" }), task("t2")],
-  });
-  const next = removeHabit(s, "h1");
-  assert.deepEqual(next.habits, []);
+test("linkableGoals: objetivos em andamento, mantendo o já vinculado", () => {
+  const goals = [goal("ativo"), goal("feito", { completedOn: TODAY }), goal("vencido", { end: "2026-01-01" })];
   assert.deepEqual(
-    next.tasks.map((t) => [t.id, t.link]),
-    [
-      ["t1", null],
-      ["t2", null],
-    ],
+    linkableGoals(goals, [], [], TODAY, null).map((g) => g.id),
+    ["ativo"],
   );
-});
-
-test("linkOptions: objetivos em andamento e todos os hábitos, mantendo o vínculo atual", () => {
-  const goals = [
-    goal("ativo", { title: "Ativo" }),
-    goal("feito", { title: "Feito", completedOn: TODAY }),
-    goal("vencido", { title: "Vencido", deadline: "2026-01-01" }),
-  ];
-  const habits: Habit[] = [{ id: "h", name: "Ler", goalId: null }];
-  assert.deepEqual(linkOptions(goals, habits, TODAY, null), {
-    goals: [{ id: "ativo", label: "Ativo" }],
-    habits: [{ id: "h", label: "Ler" }],
-  });
   assert.deepEqual(
-    linkOptions(goals, habits, TODAY, { type: "goal", id: "feito" }).goals.map((g) => g.id),
+    linkableGoals(goals, [], [], TODAY, "feito").map((g) => g.id),
     ["ativo", "feito"],
   );
 });
 
-test("linkLabel: nome do objetivo ou hábito vinculado", () => {
-  const goals = [goal("g", { title: "Renda" })];
-  const habits: Habit[] = [{ id: "h", name: "Ler", goalId: null }];
-  assert.equal(linkLabel({ type: "goal", id: "g" }, goals, habits), "Renda");
-  assert.equal(linkLabel({ type: "habit", id: "h" }, goals, habits), "Ler");
-  assert.equal(linkLabel({ type: "habit", id: "x" }, goals, habits), null);
-  assert.equal(linkLabel(null, goals, habits), null);
-});
-
-test("encodeLink/decodeLink: ida e volta, e valores inválidos viram sem vínculo", () => {
-  assert.equal(encodeLink(null), "");
-  assert.equal(encodeLink({ type: "goal", id: "a:b" }), "goal:a:b");
-  assert.deepEqual(decodeLink("goal:a:b"), { type: "goal", id: "a:b" });
-  assert.deepEqual(decodeLink("habit:h"), { type: "habit", id: "h" });
-  assert.equal(decodeLink(""), null);
-  assert.equal(decodeLink("outro:x"), null);
-  assert.equal(decodeLink("goal:"), null);
-});
-
-test("deadlineLabel: dias restantes, prazo hoje, concluído ou não alcançado", () => {
-  assert.equal(deadlineLabel(goal("g", { deadline: "2026-12-31" }), TODAY), "Faltam 34 dias");
-  assert.equal(deadlineLabel(goal("g", { deadline: "2026-11-28" }), TODAY), "Falta 1 dia");
-  assert.equal(deadlineLabel(goal("g", { deadline: TODAY }), TODAY), "Prazo hoje");
-  assert.equal(deadlineLabel(goal("g", { deadline: "2026-11-20" }), TODAY), "Não alcançado");
-  assert.equal(deadlineLabel(goal("g", { completedOn: TODAY }), TODAY), "Concluído");
-});
-
-test("successMessage: objetivo de longo prazo com dias restantes, ou a frase padrão", () => {
-  assert.deepEqual(successMessage([goal("a"), goal("b", { title: "Casa", deadline: "2026-12-07", longTerm: true })], TODAY), {
+test("successMessage: objetivo de longo prazo com progresso e tempo, ou a frase padrão", () => {
+  const g = goal("g", { title: "Casa", start: MON, end: "2026-12-07", longTerm: true });
+  const t = task("t", { type: "periodic", weekdays: [1], goalId: "g", linkedOn: MON } as Partial<Task>);
+  assert.deepEqual(successMessage([goal("a"), g], [t], [], TODAY), {
     type: "goal",
     title: "Casa",
-    detail: "Faltam 10 dias",
+    progress: "0 de 2 (0%)",
+    time: "Começa em 3 dias",
   });
-  assert.deepEqual(successMessage([goal("a")], TODAY), {
+  assert.deepEqual(successMessage([goal("a")], [], [], TODAY), {
     type: "quote",
     text: "Fazer o mínimo todos os dias é melhor que fazer muito e não acabar nada.",
   });
-  assert.equal(successMessage([], TODAY).type, "quote");
+});
+
+test("statusLabel: concluído, não alcançado ou o tempo restante", () => {
+  const g = goal("g", { end: "2026-12-31" });
+  assert.equal(statusLabel("done", g, TODAY), "Concluído");
+  assert.equal(statusLabel("missed", g, TODAY), "Não alcançado");
+  assert.equal(statusLabel("active", g, TODAY), "Faltam 34 dias");
 });

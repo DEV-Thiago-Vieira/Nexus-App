@@ -1,126 +1,83 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useState } from "react";
 import { addDays, fromDayKey, type DayKey } from "@/lib/dates.ts";
-import { deadlineLabel, goalState, isValidGoalDraft, isValidHabitDraft } from "@/lib/goals.ts";
-import type { Goal, GoalDraft, Habit, HabitDraft } from "@/lib/types.ts";
+import { goalProgress, goalState, isValidGoalDraft, progressLabel, statusLabel } from "@/lib/goals.ts";
+import type { Completion, Goal, GoalDraft, Task } from "@/lib/types.ts";
 import { TargetIcon } from "./icons";
 import { CARD, ConfirmRemove, FormActions, ItemActions, RoundCheckbox, SMALL_INPUT } from "./ui";
 
 type Props = {
   goals: Goal[];
-  habits: Habit[];
+  tasks: Task[];
+  completions: Completion[];
   today: DayKey;
-  onAddGoal: (draft: GoalDraft) => void;
-  onUpdateGoal: (id: string, draft: GoalDraft) => void;
-  onToggleGoal: (id: string) => void;
-  onRemoveGoal: (id: string) => void;
-  onAddHabit: (draft: HabitDraft) => void;
-  onUpdateHabit: (id: string, draft: HabitDraft) => void;
-  onRemoveHabit: (id: string) => void;
+  onAdd: (draft: GoalDraft) => void;
+  onUpdate: (id: string, draft: GoalDraft) => void;
+  onToggle: (id: string) => void;
+  onRemove: (id: string) => void;
 };
 
+const FORM_ROW = "px-3.5 py-3";
 const INPUT =
   "h-11 w-full rounded-xl bg-stone-50 px-3.5 text-base text-stone-900 ring-1 ring-stone-200 outline-none placeholder:text-stone-400 focus:ring-2 focus:ring-stone-300";
-const FORM_ROW = "px-3.5 py-3";
 
-export function GoalsPanel(props: Props) {
-  const { goals, habits, today } = props;
-  const [adding, setAdding] = useState<"goal" | "habit" | null>(null);
+const shortDate = (day: DayKey, withYear: boolean) =>
+  fromDayKey(day).toLocaleDateString("pt-BR", { day: "numeric", month: "short", ...(withYear && { year: "numeric" }) });
+
+const period = (start: DayKey, end: DayKey) =>
+  `${shortDate(start, start.slice(0, 4) !== end.slice(0, 4))} → ${shortDate(end, true)}`;
+
+export function GoalsPanel({ goals, tasks, completions, today, onAdd, onUpdate, onToggle, onRemove }: Props) {
+  const [adding, setAdding] = useState(false);
   const sorted = [...goals].sort((a, b) => Number(b.longTerm) - Number(a.longTerm));
 
   return (
-    <>
-      <Section
-        title="Objetivos"
-        onAdd={adding === "goal" ? undefined : () => setAdding("goal")}
-        empty={goals.length === 0 && adding !== "goal" ? "Objetivos têm um critério de conclusão e um prazo." : null}
-      >
-        {adding === "goal" && (
-          <li className={FORM_ROW}>
-            <GoalForm
-              initial={{ title: "", criterion: "", deadline: addDays(today, 30), longTerm: false }}
-              onCancel={() => setAdding(null)}
-              onSave={(draft) => {
-                props.onAddGoal(draft);
-                setAdding(null);
-              }}
-            />
-          </li>
-        )}
-        {sorted.map((goal) => (
-          <GoalItem
-            key={goal.id}
-            goal={goal}
-            today={today}
-            onToggle={() => props.onToggleGoal(goal.id)}
-            onUpdate={(draft) => props.onUpdateGoal(goal.id, draft)}
-            onRemove={() => props.onRemoveGoal(goal.id)}
-          />
-        ))}
-      </Section>
-
-      <Section
-        title="Hábitos"
-        onAdd={adding === "habit" ? undefined : () => setAdding("habit")}
-        empty={habits.length === 0 && adding !== "habit" ? "Hábitos são contínuos, como programar, desenhar ou ler." : null}
-      >
-        {adding === "habit" && (
-          <li className={FORM_ROW}>
-            <HabitForm
-              initial={{ name: "", goalId: null }}
-              goals={goals}
-              onCancel={() => setAdding(null)}
-              onSave={(draft) => {
-                props.onAddHabit(draft);
-                setAdding(null);
-              }}
-            />
-          </li>
-        )}
-        {habits.map((habit) => (
-          <HabitItem
-            key={habit.id}
-            habit={habit}
-            goals={goals}
-            onUpdate={(draft) => props.onUpdateHabit(habit.id, draft)}
-            onRemove={() => props.onRemoveHabit(habit.id)}
-          />
-        ))}
-      </Section>
-    </>
-  );
-}
-
-function Section({
-  title,
-  onAdd,
-  empty,
-  children,
-}: {
-  title: string;
-  onAdd?: () => void;
-  empty: string | null;
-  children: ReactNode;
-}) {
-  return (
     <section className="flex flex-col gap-2.5">
       <div className="flex min-h-9 items-center justify-between gap-3 px-1.5">
-        <h2 className="text-[15px] font-bold tracking-tight text-stone-800">{title}</h2>
-        {onAdd && (
+        <h2 className="text-[15px] font-bold tracking-tight text-stone-800">Objetivos</h2>
+        {!adding && (
           <button
             type="button"
-            onClick={onAdd}
+            onClick={() => setAdding(true)}
             className="h-9 rounded-xl px-3 text-[13px] font-semibold text-stone-600 transition hover:bg-stone-200/50 hover:text-stone-900"
           >
             + Novo
           </button>
         )}
       </div>
-      {empty ? (
-        <p className="px-1.5 text-sm text-stone-400">{empty}</p>
+      {goals.length === 0 && !adding ? (
+        <p className="px-1.5 text-sm leading-relaxed text-stone-400">
+          Um objetivo tem início e fim. Vincule tarefas a ele: o progresso avança quando elas são feitas nos dias
+          previstos.
+        </p>
       ) : (
-        <ul className={CARD}>{children}</ul>
+        <ul className={CARD}>
+          {adding && (
+            <li className={FORM_ROW}>
+              <GoalForm
+                initial={{ title: "", start: today, end: addDays(today, 30), longTerm: false }}
+                onCancel={() => setAdding(false)}
+                onSave={(draft) => {
+                  onAdd(draft);
+                  setAdding(false);
+                }}
+              />
+            </li>
+          )}
+          {sorted.map((goal) => (
+            <GoalItem
+              key={goal.id}
+              goal={goal}
+              tasks={tasks}
+              completions={completions}
+              today={today}
+              onToggle={() => onToggle(goal.id)}
+              onUpdate={(draft) => onUpdate(goal.id, draft)}
+              onRemove={() => onRemove(goal.id)}
+            />
+          ))}
+        </ul>
       )}
     </section>
   );
@@ -128,32 +85,50 @@ function Section({
 
 function GoalItem({
   goal,
+  tasks,
+  completions,
   today,
   onToggle,
   onUpdate,
   onRemove,
 }: {
   goal: Goal;
+  tasks: Task[];
+  completions: Completion[];
   today: DayKey;
   onToggle: () => void;
   onUpdate: (draft: GoalDraft) => void;
   onRemove: () => void;
 }) {
   const [mode, setMode] = useState<"view" | "edit" | "confirm">("view");
-  const state = goalState(goal, today);
+  const progress = goalProgress(goal, tasks, completions);
+  const state = goalState(goal, tasks, completions, today);
   const done = state === "done";
+  const percent = progress.total > 0 ? (progress.done / progress.total) * 100 : 0;
 
   if (mode === "edit") {
     return (
       <li className={FORM_ROW}>
-        <GoalForm initial={goal} onCancel={() => setMode("view")} onSave={(draft) => { onUpdate(draft); setMode("view"); }} />
+        <GoalForm
+          initial={goal}
+          onCancel={() => setMode("view")}
+          onSave={(draft) => {
+            onUpdate(draft);
+            setMode("view");
+          }}
+        />
       </li>
     );
   }
 
   if (mode === "confirm") {
     return (
-      <ConfirmRemove name={goal.title} detail="As tarefas e hábitos vinculados continuam, sem vínculo." onCancel={() => setMode("view")} onConfirm={onRemove} />
+      <ConfirmRemove
+        name={goal.title}
+        detail="As tarefas vinculadas continuam, sem vínculo."
+        onCancel={() => setMode("view")}
+        onConfirm={onRemove}
+      />
     );
   }
 
@@ -161,23 +136,35 @@ function GoalItem({
     <li className="group flex items-start py-1.5 pr-1 pl-1.5">
       <label className="flex min-w-0 flex-1 cursor-pointer items-start gap-1.5">
         <RoundCheckbox checked={done} onChange={onToggle} label={`Marcar "${goal.title}" como concluído`} />
-        <span className="min-w-0 flex-1 py-2.5">
-          <span className={`block text-base leading-6 break-words ${done ? "text-stone-400 line-through decoration-stone-300 decoration-2" : "text-stone-800"}`}>
+        <span className="min-w-0 flex-1 py-2.5 pr-2">
+          <span
+            className={`block text-base leading-6 break-words ${
+              done ? "text-stone-400 line-through decoration-stone-300 decoration-2" : "text-stone-800"
+            }`}
+          >
             {goal.title}
           </span>
-          <span className="mt-0.5 block text-[13px] leading-snug break-words text-stone-500">{goal.criterion}</span>
-          <span className="mt-1 flex flex-wrap items-center gap-x-2 text-[13px]">
+          <span className="mt-0.5 flex flex-wrap items-center gap-x-2 text-[13px]">
             {goal.longTerm && (
               <span className="flex items-center gap-1 font-medium text-red-600">
                 <TargetIcon className="size-3.5" /> Longo prazo
               </span>
             )}
             <span className={state === "missed" ? "font-semibold text-red-600" : done ? "text-emerald-600" : "text-stone-500"}>
-              {deadlineLabel(goal, today)}
+              {statusLabel(state, goal, today)}
             </span>
             <span className="text-stone-400">
-              {fromDayKey(goal.deadline).toLocaleDateString("pt-BR", { day: "numeric", month: "short", year: "numeric" })}
+              {period(goal.start, goal.end)}
             </span>
+          </span>
+          <span className="mt-2 flex items-center gap-2.5">
+            <span className="h-1.5 flex-1 overflow-hidden rounded-full bg-stone-200" aria-hidden>
+              <span
+                className={`block h-full rounded-full transition-[width] duration-500 ${done ? "bg-emerald-500" : "bg-red-500"}`}
+                style={{ width: `${percent}%` }}
+              />
+            </span>
+            <span className="shrink-0 text-[13px] text-stone-500 tabular-nums">{progressLabel(progress)}</span>
           </span>
         </span>
       </label>
@@ -197,8 +184,8 @@ function GoalForm({
 }) {
   const [draft, setDraft] = useState<GoalDraft>({
     title: initial.title,
-    criterion: initial.criterion,
-    deadline: initial.deadline,
+    start: initial.start,
+    end: initial.end,
     longTerm: initial.longTerm,
   });
   const set = (patch: Partial<GoalDraft>) => setDraft((d) => ({ ...d, ...patch }));
@@ -213,126 +200,47 @@ function GoalForm({
       }}
       onKeyDown={(e) => e.key === "Escape" && onCancel()}
     >
-      <input autoFocus value={draft.title} onChange={(e) => set({ title: e.target.value })} placeholder="Objetivo" aria-label="Título do objetivo" className={INPUT} />
       <input
-        value={draft.criterion}
-        onChange={(e) => set({ criterion: e.target.value })}
-        placeholder="Critério de conclusão (ex.: R$ 11 mil líquidos por mês)"
-        aria-label="Critério de conclusão"
+        autoFocus
+        value={draft.title}
+        onChange={(e) => set({ title: e.target.value })}
+        placeholder="Objetivo"
+        aria-label="Título do objetivo"
         className={INPUT}
       />
-      <div className="flex flex-wrap items-center gap-2">
-        <label className="flex items-center gap-2 text-[13px] text-stone-500">
-          Prazo
+      <div className="flex flex-wrap items-center gap-2 text-[13px] text-stone-500">
+        <label className="flex items-center gap-2">
+          Início
           <input
             type="date"
             required
-            value={draft.deadline}
-            onChange={(e) => set({ deadline: e.target.value })}
+            value={draft.start}
+            onChange={(e) => set({ start: e.target.value })}
             className={SMALL_INPUT}
           />
         </label>
-        <button
-          type="button"
-          aria-pressed={draft.longTerm}
-          onClick={() => set({ longTerm: !draft.longTerm })}
-          className={`flex h-9 items-center gap-1.5 rounded-xl px-3 text-[13px] font-semibold transition ${
-            draft.longTerm ? "bg-red-50 text-red-600" : "text-stone-400 hover:bg-stone-100 hover:text-stone-700"
-          }`}
-        >
-          <TargetIcon className="size-4" /> Longo prazo
-        </button>
+        <label className="flex items-center gap-2">
+          Fim
+          <input
+            type="date"
+            required
+            min={draft.start}
+            value={draft.end}
+            onChange={(e) => set({ end: e.target.value })}
+            className={SMALL_INPUT}
+          />
+        </label>
       </div>
-      <FormActions valid={valid} onCancel={onCancel} />
-    </form>
-  );
-}
-
-function HabitItem({
-  habit,
-  goals,
-  onUpdate,
-  onRemove,
-}: {
-  habit: Habit;
-  goals: Goal[];
-  onUpdate: (draft: HabitDraft) => void;
-  onRemove: () => void;
-}) {
-  const [mode, setMode] = useState<"view" | "edit" | "confirm">("view");
-  const goal = goals.find((g) => g.id === habit.goalId);
-
-  if (mode === "edit") {
-    return (
-      <li className={FORM_ROW}>
-        <HabitForm initial={habit} goals={goals} onCancel={() => setMode("view")} onSave={(draft) => { onUpdate(draft); setMode("view"); }} />
-      </li>
-    );
-  }
-
-  if (mode === "confirm") {
-    return (
-      <ConfirmRemove name={habit.name} detail="As tarefas vinculadas continuam, sem vínculo." onCancel={() => setMode("view")} onConfirm={onRemove} />
-    );
-  }
-
-  return (
-    <li className="group flex min-h-15 items-center py-1.5 pr-1 pl-4">
-      <span className="min-w-0 flex-1 py-2">
-        <span className="block text-base leading-6 break-words text-stone-800">{habit.name}</span>
-        {goal && (
-          <span className="mt-0.5 flex items-center gap-1 text-[13px] text-stone-400">
-            <TargetIcon className="size-3.5 shrink-0" />
-            <span className="truncate">{goal.title}</span>
-          </span>
-        )}
-      </span>
-      <ItemActions name={habit.name} onEdit={() => setMode("edit")} onRemove={() => setMode("confirm")} />
-    </li>
-  );
-}
-
-function HabitForm({
-  initial,
-  goals,
-  onCancel,
-  onSave,
-}: {
-  initial: HabitDraft;
-  goals: Goal[];
-  onCancel: () => void;
-  onSave: (draft: HabitDraft) => void;
-}) {
-  const [name, setName] = useState(initial.name);
-  const [goalId, setGoalId] = useState(initial.goalId);
-  const draft = { name, goalId };
-  const valid = isValidHabitDraft(draft);
-
-  return (
-    <form
-      className="flex flex-col gap-2.5"
-      onSubmit={(e) => {
-        e.preventDefault();
-        if (valid) onSave(draft);
-      }}
-      onKeyDown={(e) => e.key === "Escape" && onCancel()}
-    >
-      <input autoFocus value={name} onChange={(e) => setName(e.target.value)} placeholder="Hábito (ex.: Programar)" aria-label="Nome do hábito" className={INPUT} />
-      {goals.length > 0 && (
-        <select
-          aria-label="Objetivo do hábito"
-          value={goalId ?? ""}
-          onChange={(e) => setGoalId(e.target.value || null)}
-          className="h-9 self-start rounded-xl bg-white px-2.5 text-sm text-stone-900 ring-1 ring-stone-200 outline-none focus:ring-2 focus:ring-stone-300"
-        >
-          <option value="">Sem objetivo</option>
-          {goals.map((g) => (
-            <option key={g.id} value={g.id}>
-              {g.title}
-            </option>
-          ))}
-        </select>
-      )}
+      <button
+        type="button"
+        aria-pressed={draft.longTerm}
+        onClick={() => set({ longTerm: !draft.longTerm })}
+        className={`flex h-9 items-center gap-1.5 self-start rounded-xl px-3 text-[13px] font-semibold transition ${
+          draft.longTerm ? "bg-red-50 text-red-600" : "text-stone-400 hover:bg-stone-100 hover:text-stone-700"
+        }`}
+      >
+        <TargetIcon className="size-4" /> Longo prazo
+      </button>
       <FormActions valid={valid} onCancel={onCancel} />
     </form>
   );

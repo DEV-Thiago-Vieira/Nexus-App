@@ -1,13 +1,18 @@
 import type { DayKey } from "./dates.ts";
-import type { Schedule, Task, TaskDraft } from "./types.ts";
+import { isRepeating } from "./schedule.ts";
+import type { AppState, Schedule, Task, TaskDraft } from "./types.ts";
 
-export function addTask(tasks: Task[], id: string, draft: TaskDraft): Task[] {
-  return [...tasks, { id, doneOn: null, ...draft }];
+export function addTask(tasks: Task[], id: string, draft: TaskDraft, today: DayKey): Task[] {
+  return [...tasks, { id, doneOn: null, linkedOn: draft.goalId ? today : null, ...draft }];
 }
 
 /** Atualiza texto, prioridade e agendamento; trocar o tipo limpa a conclusão. */
-export function updateTask(tasks: Task[], id: string, draft: TaskDraft): Task[] {
-  return tasks.map((t) => (t.id === id ? { id: t.id, doneOn: t.type === draft.type ? t.doneOn : null, ...draft } : t));
+export function updateTask(tasks: Task[], id: string, draft: TaskDraft, today: DayKey): Task[] {
+  return tasks.map((t) => {
+    if (t.id !== id) return t;
+    const linkedOn = draft.goalId === null ? null : draft.goalId === t.goalId ? t.linkedOn : today;
+    return { id: t.id, doneOn: t.type === draft.type ? t.doneOn : null, linkedOn, ...draft };
+  });
 }
 
 export function removeTask(tasks: Task[], id: string): Task[] {
@@ -48,4 +53,17 @@ export function scheduleOf(task: Task): Schedule {
     case "scheduled":
       return { type: "scheduled", date: task.date };
   }
+}
+
+export function toggleTaskDone(state: AppState, id: string, today: DayKey): AppState {
+  const task = state.tasks.find((t) => t.id === id);
+  if (!task) return state;
+  const undo = task.doneOn === today;
+  return {
+    ...state,
+    tasks: toggleTask(state.tasks, id, today),
+    completions: undo
+      ? state.completions.filter((c) => !(c.taskId === id && c.day === today))
+      : [...state.completions, { taskId: id, goalId: task.goalId, day: today, once: !isRepeating(task) }],
+  };
 }
